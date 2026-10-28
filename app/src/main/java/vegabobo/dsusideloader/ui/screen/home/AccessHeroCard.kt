@@ -11,7 +11,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -132,11 +131,10 @@ fun AccessHeroCard(
                 targetState = stage,
                 transitionSpec = {
                     (fadeIn(tween(motionDuration(200))) +
-                        slideInVertically(tween(motionDuration(220))) { it / 4 }) togetherWith
+                        slideInVertically(tween(motionDuration(220))) { it / 4 }) with
                         (fadeOut(tween(motionDuration(120))) +
                             slideOutVertically(tween(motionDuration(160))) { -it / 4 })
                 },
-                label = "homeStage",
             ) { animatedStage ->
                 Text(
                     text = when (animatedStage) {
@@ -211,7 +209,7 @@ fun AccessStatusDot(
 
     val motionEnabled = rememberMotionEnabled()
     val pulse: Float = if (motionEnabled && status.isPositive()) {
-        val transition = rememberInfiniteTransition(label = "accessDot")
+        val transition = rememberInfiniteTransition()
         val scale by transition.animateFloat(
             initialValue = 0.85f,
             targetValue = 1.2f,
@@ -219,7 +217,6 @@ fun AccessStatusDot(
                 animation = tween(1200),
                 repeatMode = RepeatMode.Reverse,
             ),
-            label = "accessDotScale",
         )
         scale
     } else {

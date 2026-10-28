@@ -57,7 +57,6 @@ fun DsuInfoCard(
     val chevronRotation by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         animationSpec = tween(motionDuration(220)),
-        label = "dsuChevron",
     )
 
     Card(

@@ -10,7 +10,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,27 +83,22 @@ fun AccessMethodCard(
             else -> colorScheme.surfaceVariant
         },
         animationSpec = tween(motionDuration(220)),
-        label = "accessCardContainer",
     )
     val contentColor by animateColorAsState(
         targetValue = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface,
         animationSpec = tween(motionDuration(220)),
-        label = "accessCardContent",
     )
     val borderColor by animateColorAsState(
         targetValue = if (isSelected) colorScheme.primary else colorScheme.outline,
         animationSpec = tween(motionDuration(220)),
-        label = "accessCardBorder",
     )
     val borderWidth by animateDpAsState(
         targetValue = if (isSelected) 2.dp else 1.dp,
         animationSpec = tween(motionDuration(220)),
-        label = "accessCardBorderWidth",
     )
     val cardScale by animateFloatAsState(
         targetValue = if (isSelected) 1f else 0.97f,
         animationSpec = tween(motionDuration(220)),
-        label = "accessCardScale",
     )
 
     val action = accessPrimaryAction(method = method, result = result)
@@ -149,9 +143,8 @@ fun AccessMethodCard(
             AnimatedContent(
                 targetState = result,
                 transitionSpec = {
-                    fadeIn(tween(motionDuration(180))) togetherWith fadeOut(tween(motionDuration(120)))
+                    fadeIn(tween(motionDuration(180))) with fadeOut(tween(motionDuration(120)))
                 },
-                label = "accessStatusContent",
             ) { animatedResult ->
                 Column {
                     if (animatedResult.status == AccessStatus.CHECKING) {

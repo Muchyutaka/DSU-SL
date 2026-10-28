@@ -21,6 +21,10 @@ object AppPrefs {
     const val DISABLE_STORAGE_CHECK = "disable_storage_check"
     const val FULL_LOGCAT_LOGGING = "full_logcat_logging"
 
+    // Access method chosen in the onboarding screen
+    const val ACCESS_METHOD = "access_method"
+    const val ACCESS_METHOD_CONFIRMED = "access_method_confirmed"
+
     // Appearance
     const val THEME_MODE = "theme_mode"
     const val DYNAMIC_COLOR = "dynamic_color"

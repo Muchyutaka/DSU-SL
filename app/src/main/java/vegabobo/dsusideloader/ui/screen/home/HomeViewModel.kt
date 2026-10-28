@@ -23,6 +23,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import vegabobo.dsusideloader.BuildConfig
+import vegabobo.dsusideloader.access.AccessCheckResult
+import vegabobo.dsusideloader.access.AccessController
+import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.core.StorageManager
 import vegabobo.dsusideloader.diagnostics.ChecksumUtils
@@ -57,6 +60,7 @@ class HomeViewModel @Inject constructor(
     override val dataStore: DataStore<Preferences>,
     private val storageManager: StorageManager,
     private val historyStore: InstallHistoryStore,
+    private val accessController: AccessController,
     var session: Session,
 ) : BaseViewModel(dataStore) {
 
@@ -64,6 +68,13 @@ class HomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    /** Access method confirmed in the onboarding screen. */
+    val accessMethod: StateFlow<AccessMethod?> = accessController.selectedMethod
+
+    /** Live check results, shared with the onboarding and settings screens. */
+    val accessResults: StateFlow<Map<AccessMethod, AccessCheckResult>> =
+        accessController.checkResults
 
     var checkDynamicPartitions = true
     var checkUnavaiableStorage = true
@@ -102,6 +113,9 @@ class HomeViewModel @Inject constructor(
 
     private fun updateSheetState(sheetDisplay: SheetDisplayState) =
         _uiState.update { it.copy(sheetDisplay = sheetDisplay) }
+
+    /** Re-runs the real access check for the confirmed method. */
+    fun recheckAccess() = accessController.recheck()
 
     fun resetInstallationCard() {
         checksumJob?.cancel()

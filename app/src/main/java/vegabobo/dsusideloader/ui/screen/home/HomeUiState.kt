@@ -79,6 +79,54 @@ data class ImageSizeCardState(
     val text: String = "",
 )
 
+/**
+ * High level stage of the home screen, used by the hero card to animate
+ * between "nothing selected", "ready to install", "installing" and "finished".
+ *
+ * Pure function of [InstallationCardState] so it can be unit tested.
+ */
+enum class HomeStage {
+    EMPTY,
+    SELECTED,
+    INSTALLING,
+    RESULT,
+}
+
+fun InstallationCardState.stage(): HomeStage = when {
+    installationStep == InstallationStep.NOT_INSTALLING -> {
+        if (text.isNotEmpty() || isInstallable) HomeStage.SELECTED else HomeStage.EMPTY
+    }
+
+    installationStep.isResultStep() -> HomeStage.RESULT
+    else -> HomeStage.INSTALLING
+}
+
+/**
+ * Steps that describe a terminal state: the installation finished, failed or
+ * cannot continue without the user doing something.
+ */
+fun InstallationStep.isResultStep(): Boolean = when (this) {
+    InstallationStep.INSTALL_SUCCESS,
+    InstallationStep.INSTALL_SUCCESS_REBOOT_DYN_OS,
+    InstallationStep.DSU_ALREADY_INSTALLED,
+    InstallationStep.DSU_ALREADY_RUNNING_DYN_OS,
+    InstallationStep.REQUIRES_ADB_CMD_TO_CONTINUE,
+    InstallationStep.ERROR,
+    InstallationStep.ERROR_CANCELED,
+    InstallationStep.ERROR_REQUIRES_DISCARD_DSU,
+    InstallationStep.ERROR_ALREADY_RUNNING_DYN_OS,
+    InstallationStep.ERROR_CREATE_PARTITION,
+    InstallationStep.ERROR_CORRUPTED_IMAGE,
+    InstallationStep.ERROR_EXTERNAL_SDCARD_ALLOC,
+    InstallationStep.ERROR_NO_AVAIL_STORAGE,
+    InstallationStep.ERROR_F2FS_WRONG_PATH,
+    InstallationStep.ERROR_EXTENTS,
+    InstallationStep.ERROR_SELINUX,
+    InstallationStep.ERROR_SELINUX_ROOTLESS -> true
+
+    else -> false
+}
+
 enum class AdditionalCardState {
     NONE,
     SETUP_STORAGE,

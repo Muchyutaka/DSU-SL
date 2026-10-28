@@ -9,6 +9,7 @@ import vegabobo.dsusideloader.ui.screen.adb.AdbScreen
 import vegabobo.dsusideloader.ui.screen.history.HistoryScreen
 import vegabobo.dsusideloader.ui.screen.home.Home
 import vegabobo.dsusideloader.ui.screen.libraries.LibrariesScreen
+import vegabobo.dsusideloader.ui.screen.onboarding.Onboarding
 import vegabobo.dsusideloader.ui.screen.settings.Settings
 
 object Destinations {
@@ -18,13 +19,19 @@ object Destinations {
     const val About = "about"
     const val Libraries = "libraries"
     const val History = "history"
+    const val Onboarding = "onboarding"
     const val Up = "up"
 }
 
+/**
+ * @param startDestination [Destinations.Homepage] when an access method is
+ * already confirmed, [Destinations.Onboarding] when the user still has to pick
+ * and verify one.
+ */
 @Composable
-fun Navigation() {
+fun Navigation(startDestination: String = Destinations.Homepage) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = Destinations.Homepage) {
+    NavHost(navController = navController, startDestination = startDestination) {
         fun navigate(destination: String) {
             when (destination) {
                 Destinations.Up -> navController.navigateUp()
@@ -44,5 +51,6 @@ fun Navigation() {
         composable(Destinations.About) { AboutScreen(navigate = { navigate(it) }) }
         composable(Destinations.Libraries) { LibrariesScreen(navigate = { navigate(it) }) }
         composable(Destinations.History) { HistoryScreen(navigate = { navigate(it) }) }
+        composable(Destinations.Onboarding) { Onboarding(navigate = { navigate(it) }) }
     }
 }

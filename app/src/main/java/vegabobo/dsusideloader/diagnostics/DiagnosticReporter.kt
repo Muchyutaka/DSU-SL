@@ -119,6 +119,26 @@ class DiagnosticReporter(private val context: Context) {
         reports.drop(MAX_STORED_REPORTS).forEach { it.delete() }
     }
 
+    /**
+     * Deletes the stored diagnostic reports. Only the reports this app wrote
+     * are removed, nothing else in the app storage is touched.
+     *
+     * @return number of deleted files
+     */
+    fun clearStoredReports(): Int {
+        val directory = File(context.filesDir, LOGS_DIRECTORY)
+        val reports = directory
+            .listFiles { file -> file.isFile && file.name.startsWith(REPORT_PREFIX) }
+            ?: return 0
+        var deleted = 0
+        reports.forEach { report ->
+            if (report.delete()) {
+                deleted++
+            }
+        }
+        return deleted
+    }
+
     private fun readLogcatExcerpt(): String {
         return try {
             // "-d" dumps the current buffers and "-t" limits the output size.

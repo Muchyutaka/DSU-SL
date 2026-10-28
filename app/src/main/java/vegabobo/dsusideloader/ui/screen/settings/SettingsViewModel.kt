@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import vegabobo.dsusideloader.access.AccessCheckResult
+import vegabobo.dsusideloader.access.AccessController
+import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.diagnostics.DiagnosticReporter
 import vegabobo.dsusideloader.model.Session
@@ -27,6 +30,7 @@ import vegabobo.dsusideloader.util.OperationModeUtils
 class SettingsViewModel @Inject constructor(
     override val dataStore: DataStore<Preferences>,
     private val session: Session,
+    private val accessController: AccessController,
     val application: Application,
 ) : BaseViewModel(dataStore) {
 
@@ -34,6 +38,13 @@ class SettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    /** Access method confirmed in the onboarding screen. */
+    val accessMethod: StateFlow<AccessMethod?> = accessController.selectedMethod
+
+    /** Live access check results, shared with the onboarding and home screens. */
+    val accessResults: StateFlow<Map<AccessMethod, AccessCheckResult>> =
+        accessController.checkResults
 
     fun reloadPreferences() {
         uiState.value.preferences.forEach { entry ->
@@ -101,6 +112,22 @@ class SettingsViewModel @Inject constructor(
                 reporter.buildReport(operationMode = operationMode)
             }
             reporter.share(report)
+        }
+    }
+
+    /** Re-runs the real access check for the confirmed method. */
+    fun recheckAccess() = accessController.recheck()
+
+    /**
+     * Deletes the diagnostic reports stored by [DiagnosticReporter]. Nothing
+     * else is removed, and nothing is uploaded.
+     */
+    fun clearStoredReports() {
+        viewModelScope.launch {
+            val deleted = withContext(Dispatchers.IO) {
+                DiagnosticReporter(application).clearStoredReports()
+            }
+            Log.d(tag, "Deleted $deleted saved diagnostic report(s)")
         }
     }
 

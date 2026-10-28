@@ -2,7 +2,6 @@ package vegabobo.dsusideloader.util
 
 import android.content.Context
 import android.content.pm.PackageManager
-import com.topjohnwu.superuser.Shell
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuProvider
 
@@ -53,25 +52,11 @@ class OperationModeUtils {
 
     companion object {
 
-        fun getOperationMode(context: Context, checkShizuku: Boolean): OperationMode {
-            if (isDsuPermissionGranted(context)) {
-                if (Shell.getShell().isRoot) {
-                    return OperationMode.SYSTEM_AND_ROOT
-                }
-                return OperationMode.SYSTEM
-            }
-
-            if (Shell.getShell().isRoot) {
-                return OperationMode.ROOT
-            }
-
-            if (checkShizuku && isShizukuPermissionGranted(context)) {
-                return OperationMode.SHIZUKU
-            }
-
-            return OperationMode.ADB
-        }
-
+        /**
+         * The access method is no longer auto-detected: the user picks and
+         * verifies it in the onboarding screen (see AccessChecks and
+         * AccessController) and the result is applied by MainActivity.
+         */
         fun getOperationModeAsString(operationMode: OperationMode): String {
             return when (operationMode) {
                 OperationMode.SYSTEM_AND_ROOT -> "Root/System"
@@ -84,11 +69,6 @@ class OperationModeUtils {
 
         private fun isPermissionGranted(context: Context, permission: String): Boolean {
             return context.checkCallingOrSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
-        }
-
-        private fun isDsuPermissionGranted(context: Context): Boolean {
-            val dynPermission = "android.permission.INSTALL_DYNAMIC_SYSTEM"
-            return isPermissionGranted(context, dynPermission)
         }
 
         fun isReadLogsPermissionGranted(context: Context): Boolean {

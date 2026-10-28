@@ -371,4 +371,91 @@
 
     <string name="close_app">Close app</string>
     <string name="close_app_question">Close app?</string>
+
+    <!-- Part 1: access method onboarding -->
+    <string name="choose_access_method">Choose how to install</string>
+    <string name="choose_access_method_description">DSU Sideloader needs one of these to install a Dynamic System Update on your device. Pick one, it is checked before you can continue.</string>
+    <string name="access_check_continue">Continue</string>
+    <string name="access_check_button">Check</string>
+    <string name="access_grant_button">Grant</string>
+    <string name="access_retry_button">Retry</string>
+    <string name="access_open_app_button">Open %1$s</string>
+    <string name="access_checking">Checking access…</string>
+    <string name="access_status_available">Available</string>
+    <string name="access_status_not_installed">Not installed</string>
+    <string name="access_status_not_running">Not running</string>
+    <string name="access_status_not_authorized">Not authorized</string>
+    <string name="access_status_unavailable">Unavailable on this device</string>
+    <string name="access_status_unknown">Not checked</string>
+    <string name="access_status_checking">Checking…</string>
+    <string name="access_method_adb">ADB</string>
+    <string name="access_method_shizuku">Shizuku</string>
+    <string name="access_method_root">Root</string>
+    <string name="access_method_adb_summary">Run one command from a computer, no root needed</string>
+    <string name="access_method_shizuku_summary">Install from the phone using the Shizuku service</string>
+    <string name="access_method_root_summary">Full control, detects and reboots into the DSU</string>
+    <string name="access_method_adb_detail">The app prepares the installation and hands you a command to run from a computer:</string>
+    <string name="access_method_shizuku_detail">Shizuku runs the ADB commands for this app with the permissions of the ADB shell. The app must be granted Shizuku access.</string>
+    <string name="access_method_root_detail">The app runs the DSU commands as root. Your root manager will ask for permission.</string>
+    <string name="access_previous_method_failed">%1$s is no longer usable on this device. Check the requirements and pick a method again.</string>
+    <string name="access_reason_root_granted">Root shell available</string>
+    <string name="access_reason_root_denied">Root was refused. Grant superuser access for DSU Sideloader in your root manager, then check again.</string>
+    <string name="access_reason_root_not_available">No su binary was found. This device is not rooted, use Shizuku or ADB instead.</string>
+    <string name="access_reason_root_check_failed">The root shell could not be opened. Check your root manager and try again.</string>
+    <string name="access_reason_shizuku_available">Shizuku is running and this app is authorized</string>
+    <string name="access_reason_shizuku_not_installed">Shizuku is not installed. Install it from its website to use this method.</string>
+    <string name="access_reason_shizuku_not_running">Shizuku is installed but its service is not running. Open Shizuku and start it, then check again.</string>
+    <string name="access_reason_shizuku_not_authorized">Shizuku is running but DSU Sideloader is not authorized. Tap Grant and accept the dialog in Shizuku.</string>
+    <string name="access_reason_shizuku_check_failed">Shizuku did not answer the permission request. Open Shizuku, make sure the service is running, then check again.</string>
+    <string name="access_reason_adb_ready">USB or wireless debugging is enabled and the DSU system app is present</string>
+    <string name="access_reason_adb_debugging_disabled">Neither USB debugging nor wireless debugging is enabled in the developer options, so no computer can reach this device.</string>
+    <string name="access_reason_adb_dsu_app_missing">The DSU system app (com.android.dynsystem) is missing on this device, so no installation can be handed over.</string>
+    <string name="access_reason_adb_check_failed">The requirements for ADB mode could not be verified.</string>
+    <string name="access_reason_not_checked">Not checked yet</string>
+    <string name="access_shizuku_install_hint">Install Shizuku</string>
+    <string name="access_adb_tip">A computer with adb and a USB cable (or wireless debugging) is required for this method. The app cannot detect the computer, only the device side requirements.</string>
+    <string name="access_system_privileges">Running as a system app</string>
+    <string name="access_selected">Selected</string>
+    <string name="access_change_method">Change access method</string>
+    <string name="access_recheck">Re-check access</string>
+    <string name="access_recheck_done">Access re-checked</string>
+    <string name="access_required">Access is required before installing</string>
+
+    <!-- Part 2: home screen -->
+    <string name="home_access_hero_title">Installing with %1$s</string>
+    <string name="home_access_hero_subtitle">Tap to re-check</string>
+    <string name="home_stage_empty">No image selected</string>
+    <string name="home_stage_selected">Image selected</string>
+    <string name="home_stage_installing">Installing</string>
+    <string name="home_stage_result">Finished</string>
+    <string name="home_select_image">Select image</string>
+    <string name="home_change_image">Change image</string>
+    <string name="home_section_options">Installation options</string>
+
+    <!-- Part 3: what is DSU, collapsible -->
+    <string name="what_is_dsu_teaser">Android 10+ runs a full system image without touching your partitions.</string>
+    <string name="what_is_dsu_expand">Show explanation</string>
+    <string name="what_is_dsu_collapse">Hide explanation</string>
+    <string name="what_is_dsu_bullet_what">A Dynamic System Update boots a separate system image on top of your current one, using free space on the userdata partition.</string>
+    <string name="what_is_dsu_bullet_how">This app prepares the image, hands it to the DSU system app and can track the installation from start to reboot.</string>
+    <string name="what_is_dsu_bullet_risk">Your data stays untouched, but bugs in the image can bootloop it. Keep a way to remove the DSU, and never install an image from an untrusted source.</string>
+    <string name="what_is_dsu_bullet_future">DSU support is deprecated on Android 14 and later, the feature may disappear from future releases.</string>
+    <string name="what_is_dsu_read_docs">Read the documentation</string>
+
+    <!-- Part 4: settings sections -->
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_access">Access</string>
+    <string name="settings_section_installation">Installation</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_logs">Logs and diagnostics</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_current_access">Current access method</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_source_code">Source code</string>
+    <string name="settings_license">License</string>
+    <string name="settings_presets">Installation presets</string>
+    <string name="clear_logs_title">Clear saved logs</string>
+    <string name="clear_logs_description">Delete the diagnostic reports kept in the app storage</string>
+    <string name="clear_logs_done">Saved diagnostic reports deleted</string>
+    <string name="settings_presets_description">Reuse saved userdata and image size configurations</string>
 </resources>

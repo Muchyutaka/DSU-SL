@@ -9,20 +9,38 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuProvider
+import vegabobo.dsusideloader.access.AccessController
+import vegabobo.dsusideloader.access.AccessGateState
 import vegabobo.dsusideloader.model.Session
 import vegabobo.dsusideloader.service.PrivilegedProvider
 import vegabobo.dsusideloader.service.PrivilegedRootService
 import vegabobo.dsusideloader.service.PrivilegedService
 import vegabobo.dsusideloader.service.PrivilegedSystemService
+import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.screen.Navigation
 import vegabobo.dsusideloader.ui.theme.AppearanceViewModel
 import vegabobo.dsusideloader.ui.theme.DSUHelperTheme
@@ -36,17 +54,15 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
     @Inject
     lateinit var session: Session
 
+    @Inject
+    lateinit var accessController: AccessController
+
     private val appearanceViewModel: AppearanceViewModel by viewModels()
 
     private val tag = this.javaClass.simpleName
 
-    private var shouldCheckShizuku = false
-
-    private fun setupSessionOperationMode() {
-        val operationMode = OperationModeUtils.getOperationMode(application, shouldCheckShizuku)
-        session.setOperationMode(operationMode)
-        Log.d(tag, "Operation mode is: $operationMode")
-    }
+    /** Operation mode the privileged services were bound for, null when none. */
+    private var appliedMode: OperationMode? = null
 
     //
     // Shizuku
@@ -99,8 +115,9 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
 
     fun bindShizuku() {
         Shizuku.bindUserService(userServiceArgs, PrivilegedProvider.connection)
-        shouldCheckShizuku = true
-        setupSessionOperationMode()
+        // The access method was confirmed by the onboarding screen, do not
+        // re-detect it here.
+        session.setOperationMode(OperationMode.SHIZUKU)
     }
 
     //
@@ -118,6 +135,31 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         }
     }
 
+    //
+    // Access method gate
+    //
+
+    /**
+     * Applies the confirmed access method: sets the operation mode used by the
+     * rest of the app and binds the matching privileged service.
+     *
+     * This replaces the previous silent auto-detection: the user now picks the
+     * method in the onboarding screen and it is only applied after a real check.
+     */
+    private fun applyAccessMode(mode: OperationMode) {
+        if (appliedMode == mode) {
+            return
+        }
+        val previousMode = appliedMode
+        appliedMode = mode
+        session.setOperationMode(mode)
+        Log.d(tag, "Applying operation mode: $mode")
+        if (previousMode != null) {
+            teardownService(previousMode)
+        }
+        setupService()
+    }
+
     private fun setupService() {
         if (session.isRoot()) {
             val privRootService = Intent(this, PrivilegedRootService::class.java)
@@ -131,28 +173,71 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
             return
         }
 
-        addShizukuListeners()
+        if (session.getOperationMode() == OperationMode.SHIZUKU) {
+            addShizukuListeners()
+        }
+
+        // ADB mode needs no privileged service at all.
+    }
+
+    private fun teardownService(mode: OperationMode) {
+        try {
+            when (mode) {
+                OperationMode.ROOT, OperationMode.SYSTEM_AND_ROOT ->
+                    RootService.unbind(PrivilegedProvider.connection)
+
+                OperationMode.SYSTEM ->
+                    applicationContext.unbindService(PrivilegedProvider.connection)
+
+                OperationMode.SHIZUKU -> {
+                    removeShizukuListeners()
+                    Shizuku.unbindUserService(userServiceArgs, PrivilegedProvider.connection, true)
+                }
+
+                else -> {}
+            }
+        } catch (e: Exception) {
+            // The service may never have been bound (for example when the
+            // method was changed before the bind completed).
+            Log.w(tag, "Could not unbind $mode service", e)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Shell.getShell {}
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
             val appearanceState by appearanceViewModel.uiState.collectAsStateWithLifecycle()
+            val gateState by accessController.gateState.collectAsStateWithLifecycle()
+
             DSUHelperTheme(
                 themeMode = appearanceState.themeMode,
                 dynamicColor = appearanceState.dynamicColor,
                 amoledDark = appearanceState.amoledDark,
             ) {
-                Navigation()
+                when (val gate = gateState) {
+                    is AccessGateState.Confirmed -> Navigation(
+                        startDestination = Destinations.Homepage,
+                    )
+
+                    is AccessGateState.NeedsOnboarding -> Navigation(
+                        startDestination = Destinations.Onboarding,
+                    )
+
+                    AccessGateState.Loading -> AccessGateLoading()
+                }
             }
         }
 
-        if (savedInstanceState == null) {
-            setupSessionOperationMode()
-            setupService()
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                accessController.gateState.collect { gate ->
+                    if (gate is AccessGateState.Confirmed) {
+                        applyAccessMode(gate.operationMode)
+                    }
+                }
+            }
         }
     }
 
@@ -166,19 +251,27 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         if (isChangingConfigurations) {
             return
         }
-        when (session.getOperationMode()) {
-            OperationMode.ROOT, OperationMode.SYSTEM_AND_ROOT ->
-                RootService.unbind(PrivilegedProvider.connection)
+        appliedMode?.let { teardownService(it) }
+        appliedMode = null
+    }
+}
 
-            OperationMode.SYSTEM ->
-                applicationContext.unbindService(PrivilegedProvider.connection)
-
-            OperationMode.SHIZUKU -> {
-                removeShizukuListeners()
-                Shizuku.unbindUserService(userServiceArgs, PrivilegedProvider.connection, true)
-            }
-
-            else -> {}
+/** Shown for the few frames the persisted access method is being validated. */
+@Composable
+private fun AccessGateLoading() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(36.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

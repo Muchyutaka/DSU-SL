@@ -1,6 +1,6 @@
 package vegabobo.dsusideloader.update
 
-import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
@@ -42,7 +42,7 @@ import vegabobo.dsusideloader.util.DataStoreUtils
  */
 @Singleton
 class UpdateManager @Inject constructor(
-    @ApplicationContext private val context: Application,
+    @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>,
 ) {
 

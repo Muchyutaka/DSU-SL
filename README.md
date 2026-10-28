@@ -46,6 +46,98 @@ For testing builds, you can check artifacts at [Actions](https://github.com/Vega
 
 For more usage information, you can check [Operation modes](#operation-modes)
 
+## Building and CI
+
+### Building from source
+
+```sh
+./gradlew assembleDebug        # debug APK: app/build/outputs/apk/debug/
+./gradlew testDebugUnitTest    # JVM unit tests (checksum, patch level, diagnostics, history)
+```
+
+Requirements: JDK 17 and the Android SDK with platform 33 (`compileSdk = 33`, `minSdk = 29`, `targetSdk = 33`).
+Release signing is read from `.sign/dsu_sideloader.prop` (git-ignored), see the comment in `app/build.gradle.kts`.
+
+### GitHub Actions
+
+The pipeline lives in `.github/workflows/build.yml` (it replaces the older `android.yml`) and runs on:
+
+- pushes to `master` / `main`
+- pull requests targeting those branches
+- tags matching `v*`
+- manual runs (`workflow_dispatch`)
+
+Jobs:
+
+| Job | What it does |
+| --- | --- |
+| `Assemble debug APK` | `./gradlew assembleDebug`, then `./gradlew testDebugUnitTest`, uploads the `dsu-sideloader-debug-apk` and `unit-test-reports` artifacts |
+| `Assemble release APK (tags)` | only on `v*` tags: `./gradlew assembleRelease`, uploads `dsu-sideloader-release-apk` and attaches the APK to the tag's GitHub Release |
+
+**How to download the CI built APK:** open the Actions tab → pick the workflow run → scroll to *Artifacts* → download `dsu-sideloader-debug-apk` (downloads require being signed in to GitHub). Every artifact is built from the commit shown in the run.
+
+**How to trigger a release build:** push a tag, for instance:
+
+```sh
+git tag v2.04
+git push origin v2.04
+```
+
+The release job creates (or reuses) the GitHub Release for that tag, builds the APK and uploads it with `gh release upload --clobber`.
+
+#### Release signing secrets (optional)
+
+The release job signs the APK only when these repository secrets are configured (Settings → Secrets and variables → Actions). Nothing is committed: the job decodes the keystore and writes the git-ignored `.sign/dsu_sideloader.prop` at build time.
+
+| Secret | Description |
+| --- | --- |
+| `KEYSTORE_BASE64` | base64 encoded keystore, e.g. `base64 -w0 keystore.jks` |
+| `KEYSTORE_PASSWORD` | keystore password |
+| `KEY_ALIAS` | key alias |
+| `KEY_PASSWORD` | key password |
+
+When the secrets are absent the workflow still builds and attaches an **unsigned** `app-release-unsigned.apk`, so forks can produce release artifacts without key material.
+
+The workflow uses a `concurrency` group to cancel superseded runs and requests `contents: read` by default (the release job opts into `contents: write` to publish the release).
+
+## Installation safety, diagnostics and history
+
+### SHA-256 verification
+
+After selecting an image the app streams it once (never loading it fully in memory) and computes its SHA-256 in the background, showing progress on the installation card. You can paste the checksum published for your image with *Set expected checksum*; the app compares it locally and warns on mismatch, including an `sha256sum` style line (`<hash>  <file>`).
+
+- Verification can be turned off in **Settings → Verification → Verify SHA-256** (the card then warns that the image was not verified).
+- **Strict checksum mode** (opt-in, off by default) blocks the install button while the checksum is being computed and when an expected checksum does not match. Without an expected checksum nothing is blocked.
+- Nothing is uploaded: verification is local and non-blocking unless you enable strict mode.
+
+### Security patch level pre-check
+
+The device patch level comes from `Build.VERSION.SECURITY_PATCH`. A GSI does not expose its patch level without mounting the image, so the app **estimates it from the file name** when the name contains a date (`2023-10-12`, `20231012`, ...). When no date can be parsed the card says *unknown* instead of guessing, and when the image looks older than the device you get a warning before installing. The estimation is also disabled with **Settings → Verification → Security patch check**.
+
+### Smart error diagnostics
+
+Failed installations are classified (logcat lines and preparation exceptions) into friendly cards: SELinux denial, partition creation failure, corrupted/incomplete image, insufficient storage, unsupported architecture/image, SD card allocation, f2fs kernel, extents fragmentation and "dynamic system already running". Each card shows a human readable cause, a suggested fix, an optional documentation link and an expandable **Technical details** section with the raw error.
+
+Preparation failures (revoked SAF permission, unreadable archive, ...) are now caught and shown as an error card instead of crashing the app.
+
+### Exporting and sharing logs
+
+- **Share logs** on the installation logs sheet and **Export logs** in Settings build a single text report containing: app version/build type, device model, Android version/SDK, ABIs, security patch level, operation mode, selected image name and configuration, checksum (computed and expected), patch levels, error/step, the captured installation logs and a bounded `logcat` excerpt (last 400 lines).
+- The report is bounded (≈32k characters per section), written to the app files directory (last 5 reports are kept) and shared through the existing `FileProvider`. **Nothing is uploaded automatically**, you always pick the target app in the system share sheet. *Save logs* still uses the system file picker.
+
+### Install history and presets
+
+Every attempt records timestamp, image file name, userdata size, image size, result and a short error summary. The history is stored locally in the app DataStore (bounded to 25 entries, no image files, no URIs) and can be cleared from **Settings → History**.
+
+- *Retry* restores that configuration on the home screen; select the same image file again to continue (content URIs are intentionally not stored).
+- *Save as preset* keeps a reusable configuration (bounded to 10, duplicates of the same userdata/image size are replaced); presets can be applied or deleted from the same screen.
+
+### Theming
+
+- Material You dynamic color on Android 12+ (can be disabled).
+- Theme mode: follow system, light or dark (Settings → Appearance).
+- AMOLED black option that forces true black surfaces when dark theme is active, keeping the contrast of the generated color scheme.
+
 ## Operation modes
 
 DSU Sideloader support multiple operation modes, they will define how our app will work, also, the operation mode is obtained automatically, and by now, is impossible to change it manually, the picked operation mode will be the best available (the priority is written below, in which, the most feature supported, is the highest number, and the most basic one is the lowest).
@@ -102,6 +194,7 @@ DSU Sideloader support multiple operation modes, they will define how our app wi
 - Our app comes with a updater, you can check updates in "About" section.
 6. Other question? problem?
 - Feel free to start a issue, for troubleshooting, don't forget to send logs (logs can be obtained on installation phase, directly on app, when operation mode support installation diagnostics).
+- On builds that include the diagnostics features you can use **Share logs** on the installation logs sheet, or **Settings → Export logs**, to get a complete report (device info, installation configuration, error and a bounded logcat excerpt). The report is only shared when you pick a target app.
 
 ## About DSU
 DSU (Dynamic System Updates), is a feature introduced on Android 10, that let developers boot GSIs without touching current system partition, this is done by creating new partitions to hold a GSI and a separated userdata, to boot on them when desired.

@@ -152,6 +152,22 @@ Every attempt records timestamp, image file name, userdata size, image size, res
 - Theme mode: follow system, light or dark (Settings → Appearance).
 - AMOLED black option that forces true black surfaces when dark theme is active, keeping the contrast of the generated color scheme.
 
+## Choosing an access method
+
+On first launch the app asks how it may install a DSU and **verifies the answer** before it lets you continue. The choice is stored in the app preferences, and it is validated again on every start: if the method stopped working (Shizuku killed, root revoked) the onboarding screen comes back instead of silently falling back to another method.
+
+| Method | What is checked (real API) | What you can do when it fails |
+| --- | --- | --- |
+| **Shizuku** | manager app installed (`PackageManager`), service running (`Shizuku.pingBinder()`), this app authorized (`Shizuku.checkSelfPermission()`) | open Shizuku, request the permission (`Shizuku.requestPermission`), install Shizuku |
+| **Root** | `Shell.isAppGrantedRoot()`; when the state is unknown a shell is opened so your root manager shows its prompt (`Shell.getShell { it.isRoot }`) | grant superuser access, then re-check |
+| **ADB** | the DSU system app `com.android.dynsystem` is installed, and USB or wireless debugging is enabled (`Settings.Global.adb_enabled` / `adb_wifi_enabled`) | enable developer options and debugging, then re-check |
+
+Every card shows a status badge (Available / Not installed / Not running / Not authorized / Unavailable on this device) with the reason, an inline spinner while the check runs and a check mark when it passes. "Continue" stays disabled until the selected method passes.
+
+**What the app cannot verify:** there is no API for an unprivileged app to detect a paired computer or the wireless debugging pairing state, and ADB mode does not give the app any permission — it only exports an installation script that you run with `adb shell`. The ADB check therefore validates the device-side prerequisites and says so, instead of pretending to know whether a computer is connected.
+
+Installs that already run as a system app (the Magisk module) skip the onboarding screen: the privileged mode is detected (`INSTALL_DYNAMIC_SYSTEM`) and there is nothing to choose.
+
 ## Operation modes
 
 DSU Sideloader support multiple operation modes, they will define how our app will work, also, the operation mode is obtained automatically, and by now, is impossible to change it manually, the picked operation mode will be the best available (the priority is written below, in which, the most feature supported, is the highest number, and the most basic one is the lowest).

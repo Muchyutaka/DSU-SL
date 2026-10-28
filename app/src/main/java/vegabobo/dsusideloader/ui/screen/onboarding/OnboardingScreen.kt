@@ -79,8 +79,11 @@ fun Onboarding(
         cameFromSettings = gateState is AccessGateState.Confirmed
     }
 
+    // First run: the gate flips to "confirmed" and the nav host is rebuilt
+    // with the home screen as start destination. When the screen was opened
+    // from Settings the home screen is already on the back stack, so pop it.
     LaunchedEffect(isConfirmed) {
-        if (isConfirmed && cameFromSettings) {
+        if (isConfirmed) {
             navigate(Destinations.Homepage)
         }
     }

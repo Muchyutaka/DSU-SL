@@ -378,7 +378,6 @@
     <string name="access_check_continue">Continue</string>
     <string name="access_check_button">Check</string>
     <string name="access_grant_button">Grant</string>
-    <string name="access_retry_button">Retry</string>
     <string name="access_open_app_button">Open %1$s</string>
     <string name="access_checking">Checking access…</string>
     <string name="access_status_available">Available</string>
@@ -413,9 +412,7 @@
     <string name="access_reason_adb_check_failed">The requirements for ADB mode could not be verified.</string>
     <string name="access_reason_not_checked">Not checked yet</string>
     <string name="access_shizuku_install_hint">Install Shizuku</string>
-    <string name="access_adb_tip">A computer with adb and a USB cable (or wireless debugging) is required for this method. The app cannot detect the computer, only the device side requirements.</string>
     <string name="access_system_privileges">Running as a system app</string>
-    <string name="access_selected">Selected</string>
     <string name="access_change_method">Change access method</string>
     <string name="access_recheck">Re-check access</string>
     <string name="access_recheck_done">Access re-checked</string>
@@ -423,7 +420,6 @@
 
     <!-- Part 2: home screen -->
     <string name="home_access_hero_title">Installing with %1$s</string>
-    <string name="home_access_hero_subtitle">Tap to re-check</string>
     <string name="home_stage_empty">No image selected</string>
     <string name="home_stage_selected">Image selected</string>
     <string name="home_stage_installing">Installing</string>
@@ -456,6 +452,5 @@
     <string name="settings_presets">Installation presets</string>
     <string name="clear_logs_title">Clear saved logs</string>
     <string name="clear_logs_description">Delete the diagnostic reports kept in the app storage</string>
-    <string name="clear_logs_done">Saved diagnostic reports deleted</string>
     <string name="settings_presets_description">Reuse saved userdata and image size configurations</string>
 </resources>

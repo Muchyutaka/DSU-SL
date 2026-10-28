@@ -93,6 +93,7 @@ class AccessController @Inject constructor(
                 )
                 _selectedMethod.value = method
                 _checkResults.update { results -> results + (method to result) }
+                session.setOperationMode(systemMode)
                 _gateState.value = AccessGateState.Confirmed(
                     method = method,
                     operationMode = systemMode,
@@ -115,6 +116,9 @@ class AccessController @Inject constructor(
                 _selectedMethod.value = persistedMethod
                 val result = check(persistedMethod, requestGrant = false)
                 if (result.canContinue()) {
+                    // Apply before publishing the gate state so the main screen
+                    // never observes a stale operation mode.
+                    session.setOperationMode(persistedMethod.toOperationMode())
                     _gateState.value = AccessGateState.Confirmed(
                         method = persistedMethod,
                         operationMode = persistedMethod.toOperationMode(),

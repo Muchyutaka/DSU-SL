@@ -176,7 +176,7 @@ fun Settings(
         }
 
         if (uiState.isDevOptEnabled) {
-            SettingsSection(title = stringResource(id = R.string.developer_options)) {
+            SettingsSection(title = stringResource(id = R.string.settings_section_advanced)) {
                 PreferenceItem(
                     title = stringResource(id = R.string.storage_check_title),
                     description = stringResource(id = R.string.storage_check_description),

@@ -50,7 +50,8 @@ object ReleaseParser {
     }
 
     /** Parses the body of the GitHub releases API. Throws on malformed input. */
-    fun parseRelease(body: String): GitHubRelease = json.decodeFromString(body)
+    fun parseRelease(body: String): GitHubRelease =
+        json.decodeFromString(GitHubRelease.serializer(), body)
 
     /**
      * Converts an API response into the app model.

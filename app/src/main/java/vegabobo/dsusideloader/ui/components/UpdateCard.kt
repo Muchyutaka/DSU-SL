@@ -54,8 +54,15 @@ fun UpdateCard(
     onOpenReleasePage: () -> Unit,
     onOpenInstallSettings: () -> Unit,
     onDismiss: (() -> Unit)? = null,
+    onAcknowledgeConflict: () -> Unit = onCheck,
 ) {
     val colorScheme = MaterialTheme.colorScheme
+
+    // Android refuses an APK signed with another key (INSTALL_FAILED_UPDATE_
+    // INCOMPATIBLE). Explain it instead of leaving a cryptic card behind.
+    if (state is UpdateState.Failed && state.error == UpdateError.SIGNATURE_MISMATCH) {
+        UpdateConflictDialog(onDismiss = onAcknowledgeConflict)
+    }
 
     Card(
         modifier = modifier
@@ -218,5 +225,6 @@ private fun statusText(state: UpdateState, currentVersion: String): String = whe
         UpdateError.DOWNLOAD_FAILED -> stringResource(id = R.string.update_error_download)
         UpdateError.CHECKSUM_MISMATCH -> stringResource(id = R.string.update_error_checksum)
         UpdateError.INSTALL_NOT_ALLOWED -> stringResource(id = R.string.update_error_install)
+        UpdateError.SIGNATURE_MISMATCH -> stringResource(id = R.string.update_error_conflict)
     }
 }

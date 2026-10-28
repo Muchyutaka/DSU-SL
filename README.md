@@ -189,13 +189,21 @@ Installs that already run as a system app (the Magisk module) skip the onboardin
 
 The app checks its own releases (`https://github.com/Muchyutaka/DSU-SL/releases`) and can fetch the newest build without leaving the app.
 
-- **Detection:** one anonymous request to the GitHub API (`/releases/latest`), at most once every 6 hours, plus a manual "Check for updates" in Settings and About. Drafts and pre-releases are ignored.
-- **Where it shows:** a banner at the top of the home screen when a newer version exists (dismissible per version), a card in *Settings → About*, and a card on the About screen.
+- **Detection:** an automatic check on every launch (`MainActivity`) plus a manual "Check for updates" in Settings and About. It is one anonymous request to the GitHub API (`/releases/latest`), throttled to once every 6 hours; drafts and pre-releases are ignored.
+- **Where it shows:** a small, dismissible *Update available* banner at the top of the main screen — tapping it opens the About screen, which owns the download/install flow — plus a card in *Settings → About* and on the About screen. The detailed card stays on the main screen only while a download/install is in flight or after a failure.
 - **Fetching:** "Download" streams the `-release.apk` asset into app private storage with a progress bar. When the release publishes `SHA256SUMS` (this repository's CI always does), the downloaded file is verified against the published SHA-256 and **deleted on mismatch**.
 - **Installing:** Android's package installer is opened for the verified file; the app asks for the "install unknown apps" permission when it is missing.
+- **Signature conflicts:** before the installer is opened, the certificate of the downloaded APK is compared with the installed app. When they differ, Android would fail with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` ("package conflicts with an existing package"), so the app shows an *Update Failed* dialog explaining that the current app has to be uninstalled first instead of leaving a cryptic error behind.
 - **Privacy:** nothing is sent anywhere except the version request to GitHub, and nothing is downloaded until you tap Download.
 
 The old updater (a static `updater.json` and an author-signature gate) was removed: it only ever worked for builds signed with the upstream author's key, so forks never saw an update.
+
+### Keystore note (in-app updates)
+
+Android only installs an update over the current app when **both are signed with the same key**. This repository's CI signs releases with the keystore configured in the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD` secrets, and with the debug key when they are missing (see *Release signing secrets* above).
+
+- If you switch between a build signed with the debug key and one signed with your own release key — or between this fork's build and F-Droid / upstream — the installer refuses the update with a package conflict. Uninstall the current app first, then install the new APK.
+- To keep in-app updates working, build **every** version you install with the same keystore, and add it to the repository secrets so CI keeps signing with it. Never commit the keystore or its passwords.
 
 ## Operation modes
 

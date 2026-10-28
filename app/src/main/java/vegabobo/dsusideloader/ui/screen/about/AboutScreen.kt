@@ -83,6 +83,7 @@ fun AboutScreen(
             onInstall = { aboutViewModel.onClickInstallUpdate() },
             onOpenReleasePage = { aboutViewModel.onClickOpenReleasePage() },
             onOpenInstallSettings = { aboutViewModel.onClickOpenInstallSettings() },
+            onAcknowledgeConflict = { aboutViewModel.clearUpdateError() },
         )
         SimpleCard(
             addPadding = false,

@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -130,10 +131,6 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        homeViewModel.checkForUpdates()
-    }
-
     val installationCard = uiState.installationCard
     val isInstalling = installationCard.installationStep != InstallationStep.NOT_INSTALLING
     val canInstall = installationCard.isInstallable && !installationCard.isInstallBlocked()
@@ -163,11 +160,38 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Update banner (only when a newer release exists or the check failed).
-        val updateTag = updateState.releaseOrNull()?.tag
+        // Update: a small non-intrusive banner when a newer release exists
+        // (tapping it opens About, where the download happens), the detailed
+        // card only while something is actually in flight or failed.
+        val release = updateState.releaseOrNull()
+        val showUpdateBanner = updateState is UpdateState.Available &&
+            release != null &&
+            release.tag != updateDismissedTag
+        val showUpdateCard = updateState is UpdateState.Failed ||
+            updateState is UpdateState.Downloading ||
+            updateState is UpdateState.ReadyToInstall
+
         AnimatedVisibility(
-            visible = updateState is UpdateState.Failed ||
-                (updateTag != null && updateTag != updateDismissedTag),
+            visible = showUpdateBanner,
+            enter = fadeIn(tween(motionDuration(200))) +
+                expandVertically(tween(motionDuration(220))),
+            exit = fadeOut(tween(motionDuration(120))) +
+                shrinkVertically(tween(motionDuration(180))),
+        ) {
+            Column {
+                if (release != null) {
+                    UpdateAvailableBanner(
+                        version = release.tag,
+                        onClick = { navigate(Destinations.About) },
+                        onDismiss = { homeViewModel.dismissUpdate() },
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showUpdateCard,
             enter = fadeIn(tween(motionDuration(200))) +
                 expandVertically(tween(motionDuration(220))),
             exit = fadeOut(tween(motionDuration(120))) +
@@ -187,6 +211,7 @@ fun MainScreen(
                         homeViewModel.dismissUpdate()
                         homeViewModel.clearUpdateError()
                     },
+                    onAcknowledgeConflict = { homeViewModel.clearUpdateError() },
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -408,6 +433,59 @@ fun MainScreen(
             )
 
         SheetDisplayState.NONE -> {}
+    }
+}
+
+/**
+ * Non-intrusive "Update available" banner of the main screen. Tapping it opens
+ * the About screen, which owns the download/install flow.
+ */
+@Composable
+private fun UpdateAvailableBanner(
+    version: String,
+    onClick: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colorScheme = MaterialTheme.colorScheme
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = colorScheme.tertiaryContainer,
+        contentColor = colorScheme.onTertiaryContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.SystemUpdate,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1F)) {
+                Text(
+                    text = stringResource(id = R.string.update_available_banner_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Start,
+                )
+                Text(
+                    text = stringResource(id = R.string.update_available_banner_subtitle, version),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Start,
+                )
+            }
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(id = R.string.update_later),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
     }
 }
 

@@ -120,7 +120,9 @@ class AccessController @Inject constructor(
                 accessMethodConfirmed = persistedConfirmed,
             )
 
-            if (SetupGate.canSkipOnboarding(hasCompletedSetup, persistedMethod)) {
+            if (persistedMethod != null &&
+                SetupGate.canSkipOnboarding(hasCompletedSetup, persistedMethod)
+            ) {
                 // The setup is a one-time flow: the main screen is the entry
                 // point from now on. The method is not re-validated before the
                 // gate opens, that only blocked the start-up when Shizuku was

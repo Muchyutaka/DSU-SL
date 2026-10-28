@@ -134,6 +134,9 @@ class SettingsViewModel @Inject constructor(
 
     fun installUpdate() = updateManager.install()
 
+    /** Acknowledges a failed install (for example a signature conflict). */
+    fun clearUpdateError() = updateManager.clearError()
+
     fun openUpdateReleasePage() = updateManager.openReleasePage()
 
     fun openInstallPermissionSettings() = updateManager.openInstallPermissionSettings()

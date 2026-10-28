@@ -54,6 +54,9 @@ class AboutViewModel @Inject constructor(
 
     fun onClickOpenReleasePage() = updateManager.openReleasePage()
 
+    /** Acknowledges a failed install (for example a signature conflict). */
+    fun clearUpdateError() = updateManager.clearError()
+
     fun onClickOpenInstallSettings() = updateManager.openInstallPermissionSettings()
 
     fun resetDeveloperOptionsCounter() {

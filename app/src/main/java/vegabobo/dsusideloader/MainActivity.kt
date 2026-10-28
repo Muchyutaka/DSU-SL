@@ -58,6 +58,7 @@ import vegabobo.dsusideloader.ui.screen.Navigation
 import vegabobo.dsusideloader.ui.splash.SplashScreen
 import vegabobo.dsusideloader.ui.theme.AppearanceViewModel
 import vegabobo.dsusideloader.ui.theme.DSUHelperTheme
+import vegabobo.dsusideloader.update.UpdateManager
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
 import vegabobo.dsusideloader.ui.util.motionDuration
@@ -71,6 +72,9 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
 
     @Inject
     lateinit var accessController: AccessController
+
+    @Inject
+    lateinit var updateManager: UpdateManager
 
     private val appearanceViewModel: AppearanceViewModel by viewModels()
 
@@ -248,6 +252,11 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
                 }
             }
         }
+
+        // Automatic update check on every launch. The manager throttles it to
+        // once every few hours and only performs one anonymous request to the
+        // releases endpoint; the result is shown on the main screen banner.
+        updateManager.check()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {

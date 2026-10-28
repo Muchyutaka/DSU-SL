@@ -237,6 +237,7 @@ fun Settings(
                 onInstall = { settingsViewModel.installUpdate() },
                 onOpenReleasePage = { settingsViewModel.openUpdateReleasePage() },
                 onOpenInstallSettings = { settingsViewModel.openInstallPermissionSettings() },
+                onAcknowledgeConflict = { settingsViewModel.clearUpdateError() },
                 modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
             )
             PreferenceItem(

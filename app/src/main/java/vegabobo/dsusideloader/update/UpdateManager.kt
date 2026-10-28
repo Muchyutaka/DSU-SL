@@ -2,6 +2,7 @@ package vegabobo.dsusideloader.update
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -232,7 +233,17 @@ class UpdateManager @Inject constructor(
         Log.i(tag, "Update APK checksum verified")
     }
 
-    /** Opens the system installer for the downloaded APK. */
+    /**
+     * Opens the system installer for the downloaded APK.
+     *
+     * Before the installer is opened the signing certificate of the downloaded
+     * APK is compared with the installed app: Android refuses the update with
+     * `INSTALL_FAILED_UPDATE_INCOMPATIBLE` ("package conflicts with an existing
+     * package") when the keys differ, which happens whenever the release was
+     * built with another keystore (for example the debug key used by the CI).
+     * That case is reported as [UpdateError.SIGNATURE_MISMATCH] so the UI can
+     * explain it instead of failing silently.
+     */
     fun install(): Boolean {
         val state = _state.value
         if (state !is UpdateState.ReadyToInstall) {
@@ -245,6 +256,11 @@ class UpdateManager @Inject constructor(
         }
         if (!context.packageManager.canRequestPackageInstalls()) {
             _state.value = UpdateState.Failed(UpdateError.INSTALL_NOT_ALLOWED)
+            return false
+        }
+        if (!hasSameSignerAsInstalled(file)) {
+            Log.w(tag, "Update APK is signed with a different key, the installer would refuse it")
+            _state.value = UpdateState.Failed(UpdateError.SIGNATURE_MISMATCH)
             return false
         }
 
@@ -260,11 +276,47 @@ class UpdateManager @Inject constructor(
             }
             context.startActivity(intent)
             true
+        } catch (e: SecurityException) {
+            // Some installers surface INSTALL_FAILED_UPDATE_INCOMPATIBLE as a
+            // SecurityException before their own UI is shown.
+            Log.w(tag, "Installer refused the update package", e)
+            _state.value = UpdateState.Failed(UpdateError.SIGNATURE_MISMATCH)
+            false
         } catch (e: Exception) {
             Log.w(tag, "Could not start the installer", e)
             _state.value = UpdateState.Failed(UpdateError.INSTALL_NOT_ALLOWED)
             false
         }
+    }
+
+    /**
+     * Compares the certificate of [apk] with the one this app is installed
+     * with. Unknown signatures count as matching: the system installer is the
+     * final authority, this is only a pre-flight check.
+     */
+    @Suppress("DEPRECATION")
+    private fun hasSameSignerAsInstalled(apk: File): Boolean {
+        val installed = try {
+            context.packageManager
+                .getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+                ?.signatures
+                ?.map { it.toByteArray() }
+        } catch (e: Exception) {
+            Log.w(tag, "Could not read the installed signature", e)
+            null
+        }
+
+        val candidate = try {
+            context.packageManager
+                .getPackageArchiveInfo(apk.absolutePath, PackageManager.GET_SIGNATURES)
+                ?.signatures
+                ?.map { it.toByteArray() }
+        } catch (e: Exception) {
+            Log.w(tag, "Could not read the APK signature", e)
+            null
+        }
+
+        return ApkSignature.sameSigner(installed, candidate)
     }
 
     /** Opens the Android setting that allows installing unknown apps. */

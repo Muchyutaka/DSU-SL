@@ -114,4 +114,12 @@ enum class UpdateError {
 
     /** Android does not allow this app to install packages. */
     INSTALL_NOT_ALLOWED,
+
+    /**
+     * The downloaded APK is signed with a different key than the installed
+     * app. The system installer rejects that with
+     * `INSTALL_FAILED_UPDATE_INCOMPATIBLE` ("package conflicts with an existing
+     * package"), so it is detected before the installer is opened.
+     */
+    SIGNATURE_MISMATCH,
 }

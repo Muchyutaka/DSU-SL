@@ -27,6 +27,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -55,6 +56,7 @@ import vegabobo.dsusideloader.ui.util.motionDuration
  * field for the expected checksum; the computed hash is shown under the image
  * name in [MainScreen].
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChecksumCard(
     uiState: InstallationCardState,

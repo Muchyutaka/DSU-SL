@@ -31,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,13 +70,6 @@ fun Onboarding(
     val isConfirmed by onboardingViewModel.isConfirmed.collectAsStateWithLifecycle()
     val openUrl by onboardingViewModel.openUrl.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
-
-    // Only visible when the screen is reached from Settings (the first run flow
-    // is swapped for the main screen as soon as the gate resolves).
-    var cameFromSettings by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        cameFromSettings = gateState is AccessGateState.Confirmed
-    }
 
     // First run: the gate flips to "confirmed" and the nav host is rebuilt
     // with the home screen as start destination. When the screen was opened
@@ -200,14 +192,6 @@ fun Onboarding(
                         Text(text = stringResource(id = R.string.access_check_continue))
                     }
 
-                    if (canContinue && selectedMethod != null && cameFromSettings) {
-                        Text(
-                            text = stringResource(id = R.string.access_recheck_done),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 16.dp),
-                        )
-                    }
                 }
             }
         }

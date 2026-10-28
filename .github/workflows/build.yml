@@ -145,18 +145,70 @@ jobs:
       - name: Assemble release APK
         run: ./gradlew --no-daemon --stacktrace assembleRelease
 
-      - name: Collect APK
+      # The debug APK is built once by the "build" job; reuse that exact build
+      # instead of compiling it again so both assets come from the same commit.
+      - name: Download debug APK
+        uses: actions/download-artifact@v8
+        with:
+          name: dsu-sideloader-debug-apk
+          path: artifacts
+
+      - name: Collect APKs
         run: |
           set -euo pipefail
-          mkdir -p artifacts
-          find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' -exec cp {} artifacts/ \;
-          ls -l artifacts
+          version="${GITHUB_REF_NAME#v}"
+          release_apk="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)"
+          if [ -z "$release_apk" ]; then
+            echo "::error::no release APK was produced"
+            exit 1
+          fi
+          debug_apk="$(find artifacts -maxdepth 1 -name '*.apk' | head -n 1)"
+          if [ -z "$debug_apk" ]; then
+            echo "::error::the debug APK artifact did not contain an APK"
+            exit 1
+          fi
+          mkdir -p dist
+          # Keep a readable, tagged file name for every asset.
+          cp "$release_apk" "dist/dsu-sideloader-$version-release.apk"
+          cp "$debug_apk" "dist/dsu-sideloader-$version-debug.apk"
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::warning::No signing secrets configured: the release APK is signed with the debug key and cannot upgrade over a build signed with the real release key."
+          fi
+          if [ "${release_apk##*/}" = "app-release-unsigned.apk" ]; then
+            echo "::error::The release APK is unsigned and cannot be installed."
+            exit 1
+          fi
+          cd dist
+          sha256sum ./*.apk > SHA256SUMS
+          cat SHA256SUMS
+          ls -l
 
-      - name: Upload release APK
+      # An APK without a valid signature is rejected by Android at install time,
+      # so never publish one silently.
+      - name: Verify APK signatures
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner=""
+          if [ -n "$sdk" ] && [ -d "$sdk" ]; then
+            apksigner="$(find "$sdk" -type f -name apksigner 2>/dev/null | sort | tail -n 1)"
+          fi
+          if [ -z "$apksigner" ]; then
+            echo "::notice::apksigner was not found in the Android SDK; skipping signature verification"
+            exit 0
+          fi
+          for apk in dist/*.apk; do
+            echo "--- $apk"
+            "$apksigner" verify --print-certs "$apk"
+          done
+
+      - name: Upload APKs
         uses: actions/upload-artifact@v7
         with:
-          name: dsu-sideloader-release-apk
-          path: artifacts/*.apk
+          name: dsu-sideloader-apks
+          path: |
+            dist/*.apk
+            dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 90
 
@@ -166,7 +218,17 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          notes="Automated build for $tag.
+
+          | Asset | Description |
+          | --- | --- |
+          | \`dsu-sideloader-$version-release.apk\` | Smaller, optimized release build |
+          | \`dsu-sideloader-$version-debug.apk\` | Debug build, useful for logs and troubleshooting |
+          | \`SHA256SUMS\` | SHA-256 checksums of both APKs |
+
+          Verify a download with \`sha256sum -c SHA256SUMS\`."
           if ! gh release view "$tag" > /dev/null 2>&1; then
-            gh release create "$tag" --title "$tag" --notes "Automated release build for $tag." --verify-tag
+            gh release create "$tag" --title "$tag" --notes "$notes" --verify-tag
           fi
-          gh release upload "$tag" artifacts/*.apk --clobber
+          gh release upload "$tag" dist/*.apk dist/SHA256SUMS --clobber

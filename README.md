@@ -72,7 +72,7 @@ Jobs:
 | Job | What it does |
 | --- | --- |
 | `Assemble debug APK` | `./gradlew assembleDebug`, then `./gradlew testDebugUnitTest`, verifies the tests actually executed (a green but empty test run fails the job), then `./gradlew assembleRelease` as a R8/ProGuard compile check, and uploads the `dsu-sideloader-debug-apk` and `unit-test-reports` artifacts |
-| `Assemble release APK (tags)` | only on `v*` tags: `./gradlew assembleRelease`, uploads `dsu-sideloader-release-apk` and attaches the APK to the tag's GitHub Release |
+| `Assemble release APK (tags)` | only on `v*` tags: `./gradlew assembleRelease`, reuses the debug APK built by the previous job and attaches **both** APKs plus a `SHA256SUMS` file to the tag's GitHub Release |
 
 **How to download the CI built APK:** open the Actions tab → pick the workflow run → scroll to *Artifacts* → download `dsu-sideloader-debug-apk` (downloads require being signed in to GitHub). Every artifact is built from the commit shown in the run.
 
@@ -83,7 +83,15 @@ git tag v2.04
 git push origin v2.04
 ```
 
-The release job creates (or reuses) the GitHub Release for that tag, builds the APK and uploads it with `gh release upload --clobber`.
+The release job creates (or reuses) the GitHub Release for that tag and uploads every asset with `gh release upload --clobber`. A release tagged `v2.04` contains:
+
+| Asset | Description |
+| --- | --- |
+| `dsu-sideloader-2.04-release.apk` | optimized release build (smaller, R8 minified), signed with the release key when the secrets exist |
+| `dsu-sideloader-2.04-debug.apk` | debug build, the one to grab when you want logs or are troubleshooting |
+| `SHA256SUMS` | SHA-256 checksums of both APKs, verify with `sha256sum -c SHA256SUMS` |
+
+Both APKs are built from the same commit: the debug APK is the artifact uploaded by the `build` job of the same run, so the release never contains a binary from a different revision. The same three files are also available as the `dsu-sideloader-apks` workflow artifact.
 
 #### Release signing secrets (optional)
 
@@ -96,7 +104,9 @@ The release job signs the APK only when these repository secrets are configured 
 | `KEY_ALIAS` | key alias |
 | `KEY_PASSWORD` | key password |
 
-When the secrets are absent the workflow still builds and attaches an **unsigned** `app-release-unsigned.apk`, so forks can produce release artifacts without key material.
+When the secrets are absent the release APK is signed with the **debug key** instead, so it stays installable on a device (Android rejects unsigned APKs with `INSTALL_PARSE_FAILED_NO_CERTIFICATES`) and forks can publish working builds without key material. The run logs a warning when this happens. Such a build cannot be upgraded over one signed with the real release key — uninstall the old app first.
+
+The job also verifies both APKs with `apksigner verify --print-certs` before publishing, so an unsigned or corrupt artifact can never reach a release.
 
 The workflow uses a `concurrency` group to cancel superseded runs and requests `contents: read` by default (the release job opts into `contents: write` to publish the release). The unit test totals are written to the run summary, so a run that executed zero tests is obvious at a glance.
 

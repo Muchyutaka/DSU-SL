@@ -66,9 +66,18 @@ android {
 
     buildTypes {
         getByName("release") {
-            if (getReleaseSigningConfig(rootProject).exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Prefer the release keystore from ".sign/dsu_sideloader.prop".
+            // Without it (forks, CI runs without signing secrets) fall back to
+            // the debug key so the APK stays installable: an unsigned APK is
+            // rejected by Android with INSTALL_PARSE_FAILED_NO_CERTIFICATES.
+            // Debug signed builds cannot be upgraded over a build signed with
+            // the real release key (uninstall first).
+            signingConfig =
+                if (getReleaseSigningConfig(rootProject).exists()) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

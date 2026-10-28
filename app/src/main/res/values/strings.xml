@@ -93,6 +93,9 @@
     <string name="extents_error_title">Extents error</string>
     <string name="extents_error_description">On Android 10 devices, images/filesystem needs to have more than 512 extents, there are some fixes you can try:\n - Install DSU Sideloader Magisk\'s module.</string>
 
+    <!-- Corrupted image error card -->
+    <string name="corrupted_image_error">The selected image looks corrupted or incomplete, please choose a valid GSI file and try again.</string>
+
     <!-- Other errors card -->
     <string name="failed_create_partition">Failed to create %1$s partition.</string>
     <string name="unknown_error">Unknown error.</string>

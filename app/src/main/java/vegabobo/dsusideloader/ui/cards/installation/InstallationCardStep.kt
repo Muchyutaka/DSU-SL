@@ -187,6 +187,14 @@ fun InstallationCardStep(
                 textSecondButton = stringResource(id = R.string.mreturn),
                 onClickSecondButton = onClickClear,
             )
+        InstallationStep.ERROR_CORRUPTED_IMAGE ->
+            ProgressableCardContent(
+                text = stringResource(R.string.corrupted_image_error),
+                textFirstButton = stringResource(id = R.string.view_logs),
+                onClickFirstButton = onClickViewLogs,
+                textSecondButton = stringResource(id = R.string.mreturn),
+                onClickSecondButton = onClickClear,
+            )
         InstallationStep.ERROR_EXTERNAL_SDCARD_ALLOC ->
             ProgressableCardContent(
                 text = stringResource(

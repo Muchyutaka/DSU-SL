@@ -24,8 +24,16 @@ Google GSIs: https://developer.android.com/topic/generic-system-image/releases
      alt="Get it on F-Droid"
      height="80">](https://f-droid.org/packages/vegabobo.dsusideloader/)
 
-Or download the latest APK from the [Releases Section](https://github.com/VegaBobo/DSU-Sideloader/releases/latest).
-For testing builds, you can check artifacts at [Actions](https://github.com/VegaBobo/DSU-Sideloader/actions) tab
+Or download the latest APK from the [Releases Section](https://github.com/Muchyutaka/DSU-SL/releases/latest).
+Each release carries **both** a release APK and a debug APK plus a `SHA256SUMS` file:
+
+- `dsu-sideloader-<version>-release.apk` – optimized build, this is the one to install
+- `dsu-sideloader-<version>-debug.apk` – debug build, useful when you need logs
+- `SHA256SUMS` – verify a download with `sha256sum -c SHA256SUMS`
+
+For builds that were not released yet, check the artifacts of the [Actions](https://github.com/Muchyutaka/DSU-SL/actions) tab.
+
+> This is a fork. Releases published here are built by this repository's own CI and are signed with its key, so an APK from this fork and one from the upstream project or F-Droid cannot be installed over each other: uninstall the previous app first.
 
 ## How to use?
 1. Install app

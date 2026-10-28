@@ -1,6 +1,5 @@
 package vegabobo.dsusideloader.ui.cards.installation
 
-import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -16,7 +15,7 @@ import vegabobo.dsusideloader.ui.cards.DiagnosticCard
 import vegabobo.dsusideloader.ui.cards.hasDiagnosticContent
 import vegabobo.dsusideloader.ui.components.CardBox
 import vegabobo.dsusideloader.ui.screen.home.InstallationCardState
-import vegabobo.dsusideloader.ui.util.launcherAcResult
+import vegabobo.dsusideloader.ui.util.rememberImagePickerLauncher
 
 @Composable
 fun InstallationCard(
@@ -37,26 +36,13 @@ fun InstallationCard(
     onClickViewCommands: () -> Unit,
     onClickSetExpectedChecksum: () -> Unit = {},
 ) {
-    var chooseFile = Intent(Intent.ACTION_OPEN_DOCUMENT)
-    chooseFile.type = "*/*"
-    val mimetypes = arrayOf(
-        "application/gzip",
-        "application/x-gzip",
-        "application/x-xz",
-        "application/zip",
-        "application/octet-stream",
-    )
-    chooseFile.putExtra(Intent.EXTRA_MIME_TYPES, mimetypes)
-    chooseFile = Intent.createChooser(chooseFile, "")
-
-    val launcherSelectFile = launcherAcResult {
-        onSelectFileSuccess(it)
-    }
+    // Same picker as the home screen primary action.
+    val launcherSelectFile = rememberImagePickerLauncher(onSelectFileSuccess)
 
     val textFieldInteraction = remember { MutableInteractionSource() }
 
     if (textFieldInteraction.collectIsPressedAsState().value) {
-        launcherSelectFile.launch(chooseFile)
+        launcherSelectFile.launch()
     }
 
     CardBox(

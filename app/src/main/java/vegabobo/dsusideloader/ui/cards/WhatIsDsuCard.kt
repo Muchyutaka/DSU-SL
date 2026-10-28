@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -74,7 +75,7 @@ fun DsuInfoCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { isExpanded = !isExpanded }
-                    .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+                    .padding(start = 16.dp, end = 4.dp, top = 16.dp, bottom = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1F)) {
@@ -87,6 +88,7 @@ fun DsuInfoCard(
                         Text(
                             text = stringResource(id = R.string.what_is_dsu_teaser),
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -110,12 +112,12 @@ fun DsuInfoCard(
                 exit = shrinkVertically(tween(motionDuration(200))) +
                     fadeOut(tween(motionDuration(120))),
             ) {
-                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                     BulletText(stringResource(id = R.string.what_is_dsu_bullet_what))
                     BulletText(stringResource(id = R.string.what_is_dsu_bullet_how))
                     BulletText(stringResource(id = R.string.what_is_dsu_bullet_risk))
                     BulletText(stringResource(id = R.string.what_is_dsu_bullet_future))
-                    Spacer(modifier = Modifier.padding(top = 4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     TextButton(onClick = onOpenDocs) {
                         Icon(
                             imageVector = Icons.Outlined.Language,

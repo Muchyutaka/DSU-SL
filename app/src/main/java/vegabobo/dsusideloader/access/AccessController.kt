@@ -111,29 +111,29 @@ class AccessController @Inject constructor(
                 AppPrefs.ACCESS_METHOD_CONFIRMED,
                 false,
             )
+            val hasCompletedSetup = SetupGate.hasFinishedSetup(
+                hasCompletedSetup = DataStoreUtils.readBoolPref(
+                    dataStore,
+                    AppPrefs.HAS_COMPLETED_SETUP,
+                    false,
+                ),
+                accessMethodConfirmed = persistedConfirmed,
+            )
 
-            if (persistedMethod != null && persistedConfirmed) {
+            if (SetupGate.canSkipOnboarding(hasCompletedSetup, persistedMethod)) {
+                // The setup is a one-time flow: the main screen is the entry
+                // point from now on. The method is not re-validated before the
+                // gate opens, that only blocked the start-up when Shizuku was
+                // still binding its service; the status card runs the real
+                // check and tells the user when something needs attention.
                 _selectedMethod.value = persistedMethod
-                val result = check(persistedMethod, requestGrant = false)
-                if (result.canContinue()) {
-                    // Apply before publishing the gate state so the main screen
-                    // never observes a stale operation mode.
-                    session.setOperationMode(persistedMethod.toOperationMode())
-                    _gateState.value = AccessGateState.Confirmed(
-                        method = persistedMethod,
-                        operationMode = persistedMethod.toOperationMode(),
-                    )
-                    _isResolving.value = false
-                    return@launch
-                }
-                // The method worked before but not anymore (Shizuku stopped,
-                // root revoked, ...): ask the user again instead of silently
-                // falling back to another method.
-                _gateState.value = AccessGateState.NeedsOnboarding(
-                    previousMethod = persistedMethod,
-                    reason = result.reason.name,
+                session.setOperationMode(persistedMethod.toOperationMode())
+                _gateState.value = AccessGateState.Confirmed(
+                    method = persistedMethod,
+                    operationMode = persistedMethod.toOperationMode(),
                 )
                 _isResolving.value = false
+                check(persistedMethod, requestGrant = false)
                 return@launch
             }
 
@@ -296,6 +296,9 @@ class AccessController @Inject constructor(
                 method.toPreferenceValue(),
             )
             DataStoreUtils.updateBoolPref(dataStore, AppPrefs.ACCESS_METHOD_CONFIRMED, true)
+            // The flow is finished for good: next launches start on the main
+            // screen. "Change method" restarts it on demand.
+            DataStoreUtils.updateBoolPref(dataStore, AppPrefs.HAS_COMPLETED_SETUP, true)
             session.setOperationMode(method.toOperationMode())
             _selectedMethod.value = method
             _gateState.value = AccessGateState.Confirmed(

@@ -40,7 +40,7 @@
     <string name="checksum_computing">Computing image SHA-256… %1$d%%</string>
     <string name="checksum_unavailable">Could not read the image to compute its SHA-256 checksum.</string>
     <string name="checksum_skipped_warning">SHA-256 verification is disabled, this image was not verified. You can enable it in Settings.</string>
-    <string name="checksum_mismatch_warning">The image checksum does not match the expected value. The file may be corrupted or not the one you expected, download it again from its official source or clear the expected checksum.</string>
+    <string name="checksum_mismatch_warning">The checksum does not match the expected value. Download the image again from its official source.</string>
     <string name="checksum_mismatch_blocked">Installation blocked: strict checksum mode is enabled and the checksum does not match.</string>
     <string name="checksum_set_expected">Set expected checksum</string>
     <string name="checksum_input_title">Expected SHA-256</string>
@@ -49,12 +49,21 @@
     <string name="checksum_input_invalid">This is not a valid SHA-256 checksum.</string>
     <string name="checksum_verify">Verify</string>
     <string name="checksum_remove">Remove</string>
+    <string name="checksum_verify_toggle">Verify Checksum</string>
+    <string name="checksum_expected_hint">Set expected checksum</string>
+    <string name="checksum_expected_hint_help">Paste the published SHA-256. It is compared locally only.</string>
+    <string name="checksum_expected_set">Expected checksum set</string>
+    <string name="checksum_matches">Checksum matches the expected value</string>
+    <string name="patch_level_device_label">Device</string>
+    <string name="patch_level_image_label">Image</string>
+    <string name="patch_level_unknown">unknown</string>
+    <string name="patch_level_warning_title">Older security patch</string>
 
     <string name="patch_level_title">Security patch level</string>
     <string name="patch_level_device">Device: %1$s</string>
     <string name="patch_level_image">Image (from file name): %1$s</string>
     <string name="patch_level_image_unknown">Image: unknown (cannot be determined from the file name)</string>
-    <string name="patch_level_warning">This image looks older than your device security patch level, it may miss recent security fixes, prefer an image built with the same or a newer patch level.</string>
+    <string name="patch_level_warning">This image may miss recent security fixes. Prefer an image with the same or a newer patch level.</string>
     <string name="patch_level_estimate_note">The image patch level is estimated from its file name and may be inaccurate.</string>
 
     <!-- Installation dialog -->
@@ -480,16 +489,16 @@
     <!-- Main screen -->
     <string name="main_status_label">Access method</string>
     <string name="main_status_verified">Verified</string>
-    <string name="main_status_how_to_fix">This method needs attention before installing.</string>
+    <string name="main_status_how_to_fix">Access needs attention.</string>
     <string name="main_action_select_image">Select Image</string>
     <string name="main_action_recheck">Re-check Access</string>
     <string name="main_action_change_method">Change Method</string>
     <string name="main_image_card_title">Selected DSU Image</string>
-    <string name="main_image_none">Image: No image selected</string>
-    <string name="main_image_selected">Image: %1$s</string>
-    <string name="main_image_hint">Tap to select an image file (.img)</string>
+    <string name="main_image_none">No image selected</string>
+    <string name="main_image_selected">%1$s</string>
+    <string name="main_image_hint">Tap to choose an image file</string>
     <string name="main_install">Prepare &amp; Install</string>
-    <string name="main_tweaks_title">Optional System Tweaks</string>
+    <string name="additional_settings_title">Additional Settings</string>
 
     <!-- Logs tab -->
     <string name="log_title">Log</string>

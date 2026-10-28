@@ -23,6 +23,14 @@ object AppPrefs {
     const val ACCESS_METHOD = "access_method"
     const val ACCESS_METHOD_CONFIRMED = "access_method_confirmed"
 
+    /**
+     * True once the user finished the one-time onboarding flow and reached the
+     * main screen. While it is set, the app opens the main screen directly
+     * instead of asking for the access method again; "Change method" in the
+     * main screen still starts the flow again.
+     */
+    const val HAS_COMPLETED_SETUP = "has_completed_setup"
+
     // Appearance
     const val THEME_MODE = "theme_mode"
     const val DYNAMIC_COLOR = "dynamic_color"

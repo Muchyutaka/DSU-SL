@@ -38,6 +38,8 @@ data class InstallationCardState(
     val currentPartitionText: String = "",
 
     // Image verification
+    /** Whether the user opted into checksum verification (off by default). */
+    val checksumVerificationEnabled: Boolean = false,
     val checksum: ChecksumState = ChecksumState(),
     val expectedChecksum: String = "",
     val checksumMismatch: Boolean = false,
@@ -60,7 +62,7 @@ data class InstallationCardState(
      * still being computed for an image with an expected checksum.
      */
     fun isInstallBlocked(): Boolean {
-        if (!strictChecksum || expectedChecksum.isEmpty()) {
+        if (!checksumVerificationEnabled || !strictChecksum || expectedChecksum.isEmpty()) {
             return false
         }
         return checksum.status == ChecksumStatus.COMPUTING || checksumMismatch

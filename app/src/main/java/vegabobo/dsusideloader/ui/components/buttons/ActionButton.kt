@@ -22,7 +22,7 @@ fun ActionButton(
 ) {
     if (textButton) {
         TextButton(onClick = onClick) {
-            Text(text = text)
+            Text(text = text, style = MaterialTheme.typography.labelLarge)
         }
     } else {
         FilledTonalButton(
@@ -38,6 +38,7 @@ fun ActionButton(
         ) {
             Text(
                 text = text,
+                style = MaterialTheme.typography.labelLarge,
                 color = colorText ?: MaterialTheme.colorScheme.surface,
             )
             content()

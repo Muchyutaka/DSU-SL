@@ -27,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -56,17 +58,19 @@ fun LogScreen(logViewModel: LogViewModel = hiltViewModel()) {
     ) {
         Text(
             text = stringResource(id = R.string.log_title),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 24.sp,
             style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp),
+            textAlign = TextAlign.Start,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
         )
         Text(
             text = stringResource(id = R.string.log_subtitle),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 20.dp),
+            textAlign = TextAlign.Start,
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
 
         Box(modifier = Modifier.weight(1F)) {

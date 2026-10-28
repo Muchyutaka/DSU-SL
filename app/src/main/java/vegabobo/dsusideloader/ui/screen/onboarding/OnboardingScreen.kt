@@ -48,11 +48,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import vegabobo.dsusideloader.R
 import vegabobo.dsusideloader.access.AccessCheckResult
@@ -128,7 +126,7 @@ fun Onboarding(
             StepIndicator(
                 current = step.ordinal,
                 total = OnboardingStep.values().size,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
             )
 
             AnimatedContent(
@@ -238,15 +236,15 @@ private fun MethodStep(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = stringResource(id = R.string.choose_access_method),
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
             color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Start,
         )
         Text(
             text = stringResource(id = R.string.choose_access_method_description),
@@ -318,15 +316,15 @@ private fun SetupStep(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = stringResource(id = R.string.onboarding_setup_title),
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
             color = colorScheme.onBackground,
+            textAlign = TextAlign.Start,
         )
         Text(
             text = method?.let {
@@ -426,8 +424,8 @@ private fun ReadyStep(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.Center,
     ) {
         Surface(
@@ -449,10 +447,9 @@ private fun ReadyStep(
 
         Text(
             text = stringResource(id = R.string.onboarding_ready_title),
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Start,
             color = colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -462,7 +459,7 @@ private fun ReadyStep(
                 method?.let { accessMethodTitle(it) } ?: "",
             ),
             style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
+            textAlign = TextAlign.Start,
             color = colorScheme.onSurfaceVariant,
         )
 

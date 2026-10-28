@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
@@ -50,7 +52,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlin.system.exitProcess
 import kotlinx.coroutines.flow.collectLatest
@@ -59,7 +60,6 @@ import vegabobo.dsusideloader.access.AccessCheckResult
 import vegabobo.dsusideloader.preparation.InstallationStep
 import vegabobo.dsusideloader.ui.cards.DsuInfoCard
 import vegabobo.dsusideloader.ui.cards.installation.InstallationCard
-import vegabobo.dsusideloader.ui.cards.installation.content.VerificationInfo
 import vegabobo.dsusideloader.ui.cards.warnings.GrantingPermissionCard
 import vegabobo.dsusideloader.ui.cards.warnings.RequiresLogPermissionCard
 import vegabobo.dsusideloader.ui.cards.warnings.SetupStorage
@@ -69,6 +69,7 @@ import vegabobo.dsusideloader.ui.cards.warnings.UnsupportedCard
 import vegabobo.dsusideloader.ui.components.UpdateCard
 import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.screen.home.AdditionalCardState
+import vegabobo.dsusideloader.ui.screen.home.ChecksumStatus
 import vegabobo.dsusideloader.ui.screen.home.HomeViewModel
 import vegabobo.dsusideloader.ui.screen.home.SheetDisplayState
 import vegabobo.dsusideloader.ui.sdialogs.CancelSheet
@@ -88,13 +89,11 @@ object MainLinks {
 }
 
 /**
- * Main screen: header, access status, action row, image card, install action,
- * optional tweaks, the collapsible DSU explanation and (when relevant) the
- * update banner.
+ * Main screen: header, access status, action row, image card, checksum card,
+ * install action, additional settings and the collapsible DSU explanation.
  *
- * While an installation is running (or after a failure / success) the detailed
- * installation card takes the place of the image card, so all the progress,
- * diagnostics and recovery actions stay available.
+ * Spacing and typography follow one scale: 16 dp between cards, 8 dp between
+ * items inside a card, 16 dp corner radius on every card.
  */
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -139,6 +138,7 @@ fun MainScreen(
     val isInstalling = installationCard.installationStep != InstallationStep.NOT_INSTALLING
     val canInstall = installationCard.isInstallable && !installationCard.isInstallBlocked()
     val accessResult = accessResults[accessMethod] ?: AccessCheckResult.unknown()
+    val hasWarningCard = uiState.additionalCard != AdditionalCardState.NONE
     // Evaluated here: the transitionSpec lambda is not a composable scope.
     val cardEnterMillis = motionDuration(220)
     val cardExitMillis = motionDuration(160)
@@ -149,20 +149,21 @@ fun MainScreen(
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp, vertical = 24.dp),
     ) {
-        // 1. Header
+        // Screen title
         Text(
             text = stringResource(id = R.string.app_name),
-            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
-            letterSpacing = (-1).sp,
+            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(top = 18.dp, bottom = 20.dp),
+            textAlign = TextAlign.Start,
         )
 
-        // Update banner (only when a newer release exists).
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Update banner (only when a newer release exists or the check failed).
         val updateTag = updateState.releaseOrNull()?.tag
         AnimatedVisibility(
             visible = updateState is UpdateState.Failed ||
@@ -172,7 +173,7 @@ fun MainScreen(
             exit = fadeOut(tween(motionDuration(120))) +
                 shrinkVertically(tween(motionDuration(180))),
         ) {
-            Box(modifier = Modifier.padding(bottom = 12.dp)) {
+            Column {
                 UpdateCard(
                     state = updateState,
                     currentVersion = homeViewModel.updateCurrentVersion,
@@ -187,45 +188,43 @@ fun MainScreen(
                         homeViewModel.clearUpdateError()
                     },
                 )
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
 
-        // 2. Status card
         MainStatusCard(
             method = accessMethod,
             result = accessResult,
             onRefresh = { homeViewModel.recheckAccess() },
-            onChangeMethod = { navigate(Destinations.Onboarding) },
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. Action row
+        // Action row: three equally sized outline pills.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            MainPillButton(
+            ActionPill(
                 text = stringResource(id = R.string.main_action_select_image),
                 modifier = Modifier.weight(1f),
                 onClick = { picker.launch() },
             )
-            MainPillButton(
+            ActionPill(
                 text = stringResource(id = R.string.main_action_recheck),
                 modifier = Modifier.weight(1f),
                 onClick = { homeViewModel.recheckAccess() },
             )
-            MainPillButton(
+            ActionPill(
                 text = stringResource(id = R.string.main_action_change_method),
                 modifier = Modifier.weight(1f),
                 onClick = { navigate(Destinations.Onboarding) },
             )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Warnings that must be resolved before installing (storage, logs,
-        // bootloader, dynamic partitions).
+        // Warnings that must be resolved before installing.
         Box(modifier = Modifier.animateContentSize()) {
             when (uiState.additionalCard) {
                 AdditionalCardState.NO_DYNAMIC_PARTITIONS ->
@@ -259,7 +258,11 @@ fun MainScreen(
             }
         }
 
-        // 4/5. Image card or the live installation card.
+        if (hasWarningCard) {
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Selected image, or the live installation card while installing.
         AnimatedContent(
             targetState = isInstalling,
             transitionSpec = {
@@ -286,12 +289,13 @@ fun MainScreen(
                     onClickRebootToDynOS = { homeViewModel.onClickRebootToDynOS() },
                     onClickViewLogs = { homeViewModel.showLogsWarning() },
                     onClickViewCommands = { navigate(Destinations.ADBInstallation) },
-                    onClickSetExpectedChecksum = { homeViewModel.showExpectedChecksumSheet() },
                     minPercentageOfFreeStorage = homeViewModel.allocPercentageInt.toString(),
                 )
             } else {
                 SelectedImageCard(
                     imageName = installationCard.text,
+                    sha256 = installationCard.checksum.value
+                        .takeIf { installationCard.checksum.status == ChecksumStatus.READY },
                     isInstallable = installationCard.isInstallable,
                     isError = installationCard.isError,
                     onSelect = { picker.launch() },
@@ -301,18 +305,26 @@ fun MainScreen(
         }
 
         if (!isInstalling) {
-            // Checksum / patch level information of the chosen image.
-            VerificationInfo(
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ChecksumCard(
                 uiState = installationCard,
-                onClickSetExpectedChecksum = { homeViewModel.showExpectedChecksumSheet() },
+                expectedChecksumInput = uiState.expectedChecksumInput,
+                expectedChecksumInputError = uiState.expectedChecksumInputError,
+                onToggleVerification = { homeViewModel.setChecksumVerification(it) },
+                onExpectedChecksumChange = { homeViewModel.updateExpectedChecksumInput(it) },
+                onApplyExpectedChecksum = { homeViewModel.onConfirmExpectedChecksum() },
+                onClearExpectedChecksum = { homeViewModel.onClearExpectedChecksum() },
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 5. Install button
             Button(
                 onClick = { homeViewModel.onClickInstall() },
                 enabled = canInstall,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
                 shape = RoundedCornerShape(50),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -320,21 +332,17 @@ fun MainScreen(
                     disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
             ) {
                 Text(
                     text = stringResource(id = R.string.main_install),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 6. Tweaks
-            MainTweaksCard(
+            AdditionalSettingsCard(
                 userdataState = uiState.userDataCard,
                 imageSizeState = uiState.imageSizeCard,
                 isInstalling = isInstalling,
@@ -347,7 +355,6 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 7. What is DSU?
         DsuInfoCard(onOpenDocs = { uriHandler.openUri(MainLinks.DSU_DOCS) })
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -404,39 +411,41 @@ fun MainScreen(
     }
 }
 
-/** Outline pill used for the three secondary actions of the main screen. */
+/** Outline pill of the action row: same height and label style for all three. */
 @Composable
-private fun MainPillButton(
+private fun ActionPill(
     text: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     OutlinedButton(
         onClick = onClick,
+        modifier = modifier.height(48.dp),
         shape = RoundedCornerShape(50),
-        contentPadding = ButtonDefaults.TextButtonContentPadding,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.onBackground,
         ),
-        modifier = modifier,
     ) {
         Text(
             text = text,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.labelLarge,
             textAlign = TextAlign.Center,
-            fontSize = 12.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
 /**
- * "Selected DSU Image" card: the file name (or the empty prompt) inside an
- * inner rounded box. Tapping it opens the system file picker.
+ * "Selected DSU Image" card: the file name (or the empty prompt) in an inner
+ * rounded box, plus the computed SHA-256 of the image once it is available.
+ * Tapping the box opens the system file picker.
  */
 @Composable
 private fun SelectedImageCard(
     imageName: String,
+    sha256: String?,
     isInstallable: Boolean,
     isError: Boolean,
     onSelect: () -> Unit,
@@ -445,80 +454,104 @@ private fun SelectedImageCard(
     val colorScheme = MaterialTheme.colorScheme
     val hasImage = imageName.isNotEmpty()
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = stringResource(id = R.string.main_image_card_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = colorScheme.onBackground,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
-        )
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = colorScheme.surfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = colorScheme.surfaceVariant,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = colorScheme.surface,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect() },
+            Text(
+                text = stringResource(id = R.string.main_image_card_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = colorScheme.onSurface,
+                textAlign = TextAlign.Start,
+            )
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect() },
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = if (hasImage) {
-                                Icons.Outlined.Description
+                    Icon(
+                        imageVector = if (hasImage) {
+                            Icons.Outlined.Description
+                        } else {
+                            Icons.Outlined.InsertDriveFile
+                        },
+                        contentDescription = null,
+                        tint = if (isError) colorScheme.error else colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1F)) {
+                        Text(
+                            text = if (hasImage) {
+                                imageName
                             } else {
-                                Icons.Outlined.InsertDriveFile
+                                stringResource(id = R.string.main_image_none)
                             },
-                            contentDescription = null,
-                            tint = if (isError) colorScheme.error else colorScheme.primary,
-                            modifier = Modifier.size(28.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Start,
+                            color = when {
+                                isError -> colorScheme.error
+                                hasImage -> colorScheme.onSurface
+                                else -> colorScheme.onSurfaceVariant
+                            },
                         )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1F)) {
-                            Text(
-                                text = if (hasImage) {
-                                    stringResource(id = R.string.main_image_selected, imageName)
-                                } else {
-                                    stringResource(id = R.string.main_image_none)
-                                },
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                color = if (isError) colorScheme.error else colorScheme.onSurface,
-                            )
+                        if (!hasImage) {
                             Text(
                                 text = stringResource(id = R.string.main_image_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Start,
                             )
+                        } else if (sha256 != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            SelectionContainer {
+                                Text(
+                                    text = sha256,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Start,
+                                )
+                            }
                         }
                     }
                 }
+            }
 
-                if (hasImage && !isInstallable) {
-                    Text(
-                        text = stringResource(id = R.string.file_unsupported),
-                        color = colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 8.dp, start = 4.dp),
-                    )
-                }
+            if (hasImage && !isInstallable) {
+                Text(
+                    text = stringResource(id = R.string.file_unsupported),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorScheme.error,
+                    textAlign = TextAlign.Start,
+                )
+            }
 
-                if (hasImage) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                    ) {
-                        TextButton(onClick = onClear) {
-                            Text(text = stringResource(id = R.string.clear))
-                        }
+            if (hasImage) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onClear) {
+                        Text(
+                            text = stringResource(id = R.string.clear),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
                 }
             }

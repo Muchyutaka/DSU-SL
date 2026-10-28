@@ -126,9 +126,9 @@ The unit tests live in `app/src/test` and only cover plain Kotlin logic (checksu
 
 ### SHA-256 verification
 
-After selecting an image the app streams it once (never loading it fully in memory) and computes its SHA-256 in the background, showing progress on the installation card. You can paste the checksum published for your image with *Set expected checksum*; the app compares it locally and warns on mismatch, including an `sha256sum` style line (`<hash>  <file>`).
+Verification is **opt-in and off by default**. The *Verify Checksum* switch on the main screen turns it on: the app then streams the image once (never loading it fully in memory), computes its SHA-256 in the background with a progress bar and shows the hash in a monospace, selectable block under the image name. Paste the checksum published for your image into *Set expected checksum* and the app compares it locally, warning on mismatch with an `sha256sum` style line (`<hash>  <file>`).
 
-- Verification can be turned off in **Settings → Verification → Verify SHA-256** (the card then warns that the image was not verified).
+- The same switch exists in **Settings → Verification → Verify SHA-256**; while it is off the image is not hashed at all.
 - **Strict checksum mode** (opt-in, off by default) blocks the install button while the checksum is being computed and when an expected checksum does not match. Without an expected checksum nothing is blocked.
 - Nothing is uploaded: verification is local and non-blocking unless you enable strict mode.
 
@@ -166,12 +166,12 @@ Every attempt records timestamp, image file name, userdata size, image size, res
 
 - **Splash**: the app icon fades in, holds for a moment and then fades out while sliding left off the screen. Skipped when the system asks for reduced motion.
 - **Onboarding (three steps)**: *choose a method* → *finish its setup* (numbered instructions plus the live check/grant action) → *ready*. Every step change animates with `AnimatedContent`: the outgoing step fades out while sliding left, the incoming one fades in from the right, and the same pair of animations plays when the flow hands over to the main screen.
-- **Main screen**: monospace title, access status card (verified check mark or a warning icon, with a refresh button), the three outline pills *Select Image* / *Re-check Access* / *Change Method*, the selected image card, a full width *Prepare & Install* button (disabled until an image is ready), the *Optional System Tweaks* card and a collapsible *What is DSU?* section. While an installation runs the detailed installation card replaces the image card.
+- **Main screen**: monospace title, access status card (verified check mark or a warning icon, with a refresh button), the three outline pills *Select Image* / *Re-check Access* / *Change Method*, the selected image card with the computed SHA-256, the *Verify Checksum* card (toggle, expected checksum field, patch level warning as a proper card), a full width *Prepare & Install* button (disabled until an image is ready), the *Additional Settings* card and a collapsible *What is DSU?* section. Every card uses a 16 dp corner radius, 16 dp inner padding and `surfaceVariant`, with 16 dp between cards and 8 dp between items. While an installation runs the detailed installation card replaces the image card.
 - **Bottom navigation**: Main, Log and Settings. The Log tab shows the installation log as monospace lines and offers the same explicit share/clear actions as the bottom sheet — nothing is uploaded automatically. The bar hides itself on detail screens (installation commands, about, libraries, history, onboarding).
 
 ## Choosing an access method
 
-On first launch the app walks through three steps: pick how it may install a DSU, follow that method's setup instructions, and confirm. The answer is **verified** before it lets you continue. The choice is stored in the app preferences, and it is validated again on every start: if the method stopped working (Shizuku killed, root revoked) the onboarding screen comes back instead of silently falling back to another method.
+On first launch the app walks through three steps: pick how it may install a DSU, follow that method's setup instructions, and confirm. The answer is **verified** before it lets you continue. This is a **one-time setup**: once it is finished the app stores `has_completed_setup` and every later launch opens the main screen directly. The method is still checked in the background on start-up, but a method that stopped working (Shizuku killed, root revoked) is reported on the status card with *Re-check Access* / *Change Method* instead of forcing the whole flow again. *Change Method* reopens the onboarding flow at any time.
 
 | Method | What is checked (real API) | What you can do when it fails |
 | --- | --- | --- |

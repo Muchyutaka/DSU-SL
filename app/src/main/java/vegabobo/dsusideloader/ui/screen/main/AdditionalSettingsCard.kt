@@ -5,6 +5,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,8 +30,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import vegabobo.dsusideloader.R
 import vegabobo.dsusideloader.ui.components.FileSelectionBox
 import vegabobo.dsusideloader.ui.screen.home.ImageSizeCardState
@@ -38,12 +39,12 @@ import vegabobo.dsusideloader.ui.screen.home.UserDataCardState
 import vegabobo.dsusideloader.ui.util.motionDuration
 
 /**
- * "Optional System Tweaks" card: a row per tweak with an icon, the current
- * value and a switch. Enabling a row reveals the numeric field, which is the
- * same logic the previous separate cards used.
+ * "Additional Settings" card: a row per tweak with an icon, the current value
+ * and a switch. Enabling a row reveals the numeric field, which is the same
+ * logic the previous separate cards used.
  */
 @Composable
-fun MainTweaksCard(
+fun AdditionalSettingsCard(
     userdataState: UserDataCardState,
     imageSizeState: ImageSizeCardState,
     isInstalling: Boolean,
@@ -59,26 +60,32 @@ fun MainTweaksCard(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize(tween(motionDuration(240))),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorScheme.surfaceVariant,
+            contentColor = colorScheme.onSurface,
+        ),
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = Icons.Outlined.Tune,
                     contentDescription = null,
                     tint = colorScheme.primary,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(20.dp),
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringResource(id = R.string.main_tweaks_title),
+                    text = stringResource(id = R.string.additional_settings_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.weight(1F),
                 )
             }
-
-            Spacer(modifier = Modifier.padding(top = 12.dp))
 
             // Userdata size
             Row(
@@ -96,11 +103,13 @@ fun MainTweaksCard(
                     Text(
                         text = stringResource(id = R.string.userdata_size),
                         style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Start,
                     )
                     Text(
                         text = stringResource(id = R.string.userdata_size_info),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Start,
                     )
                 }
                 Switch(
@@ -132,15 +141,13 @@ fun MainTweaksCard(
                                 id = R.string.allowed_userdata_allocation,
                                 userdataState.maximumAllowed,
                             ),
+                            style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.error,
-                            lineHeight = 14.sp,
-                            fontSize = 14.sp,
+                            textAlign = TextAlign.Start,
                         )
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.padding(top = 12.dp))
 
             // Image size
             Row(
@@ -158,11 +165,13 @@ fun MainTweaksCard(
                     Text(
                         text = stringResource(id = R.string.image_size),
                         style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Start,
                     )
                     Text(
                         text = stringResource(id = R.string.image_size_info),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Start,
                     )
                 }
                 Switch(
@@ -191,9 +200,9 @@ fun MainTweaksCard(
                         Text(
                             modifier = Modifier.padding(start = 1.dp),
                             text = stringResource(id = R.string.not_recommended_option),
+                            style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.error,
-                            lineHeight = 14.sp,
-                            fontSize = 14.sp,
+                            textAlign = TextAlign.Start,
                         )
                     }
                 }

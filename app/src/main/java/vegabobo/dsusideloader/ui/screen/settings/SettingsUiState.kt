@@ -22,7 +22,7 @@ data class SettingsUiState(
         AppPrefs.FULL_LOGCAT_LOGGING to false,
         AppPrefs.DYNAMIC_COLOR to true,
         AppPrefs.AMOLED_BLACK to false,
-        AppPrefs.VERIFY_CHECKSUM to true,
+        AppPrefs.VERIFY_CHECKSUM to false,
         AppPrefs.STRICT_CHECKSUM to false,
         AppPrefs.CHECK_PATCH_LEVEL to true,
     ),

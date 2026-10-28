@@ -231,7 +231,46 @@ class HomeViewModel @Inject constructor(
             Log.d(tag, "disabledStorageCheck: $shouldKeepScreenOn")
 
             val strictChecksum = readBoolPref(AppPrefs.STRICT_CHECKSUM)
-            updateInstallationCard { it.copy(strictChecksum = strictChecksum) }
+            val verifyChecksum = readBoolPref(AppPrefs.VERIFY_CHECKSUM, false)
+            updateInstallationCard {
+                it.copy(
+                    strictChecksum = strictChecksum,
+                    checksumVerificationEnabled = verifyChecksum,
+                )
+            }
+        }
+    }
+
+    /**
+     * Turns SHA-256 verification on or off for the current selection.
+     *
+     * Verification is off by default: while it is off the image is not hashed
+     * and nothing is compared. Turning it on computes the hash of the selected
+     * image right away so it can be shown and compared.
+     */
+    fun setChecksumVerification(enabled: Boolean) {
+        viewModelScope.launch {
+            updateBoolPref(AppPrefs.VERIFY_CHECKSUM, enabled)
+            updateInstallationCard {
+                it.copy(
+                    checksumVerificationEnabled = enabled,
+                    // The expected value and the computed hash are kept: they
+                    // stay visible but nothing is compared while this is off.
+                    checksumMismatch = false,
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    expectedChecksumInput = it.installationCard.expectedChecksum,
+                    expectedChecksumInputError = false,
+                )
+            }
+            if (enabled) {
+                startChecksumComputation()
+            } else {
+                checksumJob?.cancel()
+                checksumJob = null
+            }
         }
     }
 
@@ -700,15 +739,23 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun startChecksumComputation() {
+        checksumJob?.cancel()
         checksumJob = viewModelScope.launch {
-            val verifyChecksum = readBoolPref(AppPrefs.VERIFY_CHECKSUM, true)
+            val verifyChecksum = readBoolPref(AppPrefs.VERIFY_CHECKSUM, false)
             val strictChecksum = readBoolPref(AppPrefs.STRICT_CHECKSUM)
-            updateInstallationCard { it.copy(strictChecksum = strictChecksum) }
+            updateInstallationCard {
+                it.copy(
+                    strictChecksum = strictChecksum,
+                    checksumVerificationEnabled = verifyChecksum,
+                )
+            }
 
             if (!verifyChecksum) {
+                // Off by default: no hashing, the image is not "unverified",
+                // the user simply did not ask for verification.
                 Log.d(tag, "SHA-256 verification is disabled")
                 updateInstallationCard {
-                    it.copy(checksum = ChecksumState(status = ChecksumStatus.SKIPPED))
+                    it.copy(checksum = ChecksumState(), checksumMismatch = false)
                 }
                 return@launch
             }
@@ -763,7 +810,8 @@ class HomeViewModel @Inject constructor(
     private fun updateChecksumMismatch() {
         val card = uiState.value.installationCard
         val actual = card.checksum.value
-        val mismatch = card.expectedChecksum.isNotEmpty() &&
+        val mismatch = card.checksumVerificationEnabled &&
+            card.expectedChecksum.isNotEmpty() &&
             actual.isNotEmpty() &&
             !ChecksumUtils.matches(card.expectedChecksum, actual)
         updateInstallationCard { it.copy(checksumMismatch = mismatch) }

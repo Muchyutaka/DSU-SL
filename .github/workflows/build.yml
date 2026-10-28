@@ -219,16 +219,26 @@ jobs:
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
           version="${tag#v}"
-          notes="Automated build for $tag.
-
-          | Asset | Description |
-          | --- | --- |
-          | \`dsu-sideloader-$version-release.apk\` | Smaller, optimized release build |
-          | \`dsu-sideloader-$version-debug.apk\` | Debug build, useful for logs and troubleshooting |
-          | \`SHA256SUMS\` | SHA-256 checksums of both APKs |
-
-          Verify a download with \`sha256sum -c SHA256SUMS\`."
+          {
+            echo "Automated build for $tag."
+            echo
+            echo "| Asset | Description |"
+            echo "| --- | --- |"
+            echo "| \`dsu-sideloader-$version-release.apk\` | Optimized release build (smaller, R8 minified). |"
+            echo "| \`dsu-sideloader-$version-debug.apk\` | Debug build, useful for logs and troubleshooting. |"
+            echo "| \`SHA256SUMS\` | SHA-256 checksums of both APKs, verify with \`sha256sum -c SHA256SUMS\`. |"
+            echo
+            echo "### How to install"
+            echo
+            echo "1. Android 10 or newer is required."
+            echo "2. Allow installing unknown apps for the browser or file manager you download with."
+            echo "3. The app needs Shizuku or root to install the DSU; it walks you through the setup when it is missing."
+            if [ -z "${KEYSTORE_BASE64:-}" ]; then
+              echo
+              echo "> **Note:** this repository has no release signing key configured, so both APKs are signed with the debug key. Uninstall any build signed with a different key before installing."
+            fi
+          } > notes.md
           if ! gh release view "$tag" > /dev/null 2>&1; then
-            gh release create "$tag" --title "$tag" --notes "$notes" --verify-tag
+            gh release create "$tag" --title "$tag" --notes-file notes.md --verify-tag
           fi
           gh release upload "$tag" dist/*.apk dist/SHA256SUMS --clobber

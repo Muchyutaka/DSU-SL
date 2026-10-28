@@ -31,6 +31,9 @@ object AccessChecks {
      */
     const val DSU_PACKAGE = "com.android.dynsystem"
 
+    /** Key of the "Wireless debugging" developer setting (value: 0/1). */
+    private const val ADB_WIFI_ENABLED_KEY = "adb_wifi_enabled"
+
     /**
      * Root check.
      *
@@ -200,7 +203,9 @@ object AccessChecks {
         }
 
         val usbDebugging = globalFlag(context, Settings.Global.ADB_ENABLED)
-        val wirelessDebugging = globalFlag(context, Settings.Global.ADB_WIFI_ENABLED)
+        // Settings.Global.ADB_WIFI_ENABLED is @hide in the public SDK, the
+        // setting key itself is a stable string.
+        val wirelessDebugging = globalFlag(context, ADB_WIFI_ENABLED_KEY)
 
         return if (usbDebugging || wirelessDebugging) {
             AccessCheckResult.available(

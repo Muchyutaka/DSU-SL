@@ -1,7 +1,11 @@
 import java.util.Properties
 
 fun getReleaseSigningConfig(): File {
-    return File(".sign/dsu_sideloader.prop")
+    // Resolve against the root project so the file is found no matter which
+    // directory Gradle was invoked from (locally or on CI). Fall back to the
+    // historical working-directory relative path.
+    val rootProjectFile = rootProject.layout.projectDirectory.file(".sign/dsu_sideloader.prop").asFile
+    return if (rootProjectFile.exists()) rootProjectFile else File(".sign/dsu_sideloader.prop")
 }
 
 plugins {
@@ -156,6 +160,9 @@ dependencies {
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:_")
 
     compileOnly(project(":hidden-api-stub"))
+
+    // Plain JVM unit tests (no Android framework, no Robolectric).
+    testImplementation("junit:junit:_")
 }
 
 tasks {

@@ -23,8 +23,8 @@ import vegabobo.dsusideloader.ui.components.PreferenceItem
 import vegabobo.dsusideloader.ui.components.SettingsSection
 import vegabobo.dsusideloader.ui.components.TopBar
 import vegabobo.dsusideloader.ui.screen.Destinations
-import vegabobo.dsusideloader.ui.screen.onboarding.accessMethodTitle
-import vegabobo.dsusideloader.ui.screen.onboarding.accessStatusLabel
+import vegabobo.dsusideloader.ui.components.access.accessMethodTitle
+import vegabobo.dsusideloader.ui.components.access.accessStatusLabel
 import vegabobo.dsusideloader.ui.theme.ThemeMode
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.collectAsStateWithLifecycle

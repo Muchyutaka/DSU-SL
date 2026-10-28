@@ -48,6 +48,8 @@ import vegabobo.dsusideloader.access.AccessGateState
 import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.access.AccessStatus
 import vegabobo.dsusideloader.ui.components.AccessMethodCard
+import vegabobo.dsusideloader.ui.components.access.accessMethodSummary
+import vegabobo.dsusideloader.ui.components.access.accessMethodTitle
 import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.util.motionDuration
 import vegabobo.dsusideloader.util.collectAsStateWithLifecycle

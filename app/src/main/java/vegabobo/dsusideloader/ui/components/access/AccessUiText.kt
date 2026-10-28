@@ -1,4 +1,4 @@
-package vegabobo.dsusideloader.ui.screen.onboarding
+package vegabobo.dsusideloader.ui.components.access
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable

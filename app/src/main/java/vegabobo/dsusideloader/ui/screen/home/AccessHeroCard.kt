@@ -47,9 +47,9 @@ import vegabobo.dsusideloader.R
 import vegabobo.dsusideloader.access.AccessCheckResult
 import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.access.AccessStatus
-import vegabobo.dsusideloader.ui.screen.onboarding.accessMethodTitle
-import vegabobo.dsusideloader.ui.screen.onboarding.accessReasonText
-import vegabobo.dsusideloader.ui.screen.onboarding.accessStatusLabel
+import vegabobo.dsusideloader.ui.components.access.accessMethodTitle
+import vegabobo.dsusideloader.ui.components.access.accessReasonText
+import vegabobo.dsusideloader.ui.components.access.accessStatusLabel
 import vegabobo.dsusideloader.ui.util.motionDuration
 import vegabobo.dsusideloader.ui.util.rememberMotionEnabled
 

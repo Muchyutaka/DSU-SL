@@ -10,8 +10,6 @@ import vegabobo.dsusideloader.preparation.InstallationStep
  */
 enum class DiagnosticType {
     UNKNOWN,
-    SECURITY_PATCH_MISMATCH,
-    CHECKSUM_MISMATCH,
     SELINUX_DENIAL,
     PARTITION_CREATION_FAILED,
     CORRUPTED_IMAGE,

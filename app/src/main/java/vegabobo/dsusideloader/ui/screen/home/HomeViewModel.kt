@@ -26,6 +26,9 @@ import vegabobo.dsusideloader.BuildConfig
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.core.StorageManager
 import vegabobo.dsusideloader.diagnostics.ChecksumUtils
+import vegabobo.dsusideloader.diagnostics.DiagnosticMapper
+import vegabobo.dsusideloader.diagnostics.DiagnosticReporter
+import vegabobo.dsusideloader.diagnostics.DiagnosticType
 import vegabobo.dsusideloader.diagnostics.PatchLevelComparison
 import vegabobo.dsusideloader.diagnostics.PatchLevelUtils
 import vegabobo.dsusideloader.installer.adb.AdbInstallationHandler
@@ -236,15 +239,23 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO + installationJob) {
             session.preferences.isUnmountSdCard = readBoolPref(AppPrefs.UMOUNT_SD)
             session.preferences.useBuiltinInstaller = readBoolPref(AppPrefs.USE_BUILTIN_INSTALLER)
-            Preparation(
-                storageManager = storageManager,
-                session = session,
-                job = installationJob,
-                onStepUpdate = this@HomeViewModel::onStepUpdate,
-                onPreparationProgressUpdate = this@HomeViewModel::onPreparationProgressUpdate,
-                onCanceled = this@HomeViewModel::onClickCancelInstallationButton,
-                onPreparationFinished = this@HomeViewModel::onPreparationFinished,
-            ).invoke()
+            try {
+                Preparation(
+                    storageManager = storageManager,
+                    session = session,
+                    job = installationJob,
+                    onStepUpdate = this@HomeViewModel::onStepUpdate,
+                    onPreparationProgressUpdate = this@HomeViewModel::onPreparationProgressUpdate,
+                    onCanceled = this@HomeViewModel::onClickCancelInstallationButton,
+                    onPreparationFinished = this@HomeViewModel::onPreparationFinished,
+                ).invoke()
+            } catch (e: CancellationException) {
+                Log.d(tag, "Preparation cancelled")
+                throw e
+            } catch (e: Exception) {
+                Log.e(tag, "Preparation failed", e)
+                onPreparationFailed(e)
+            }
         }
     }
 
@@ -333,6 +344,55 @@ class HomeViewModel @Inject constructor(
             "allocPercentage: $allocPercentage\n" +
             "hasAvailableStorage: $hasAvailableStorage\n" +
             "maximumAllowedForAllocation: $maximumAllowedForAllocation\n"
+    }
+
+    //
+    // Diagnostics export (explicit sharing, never automatic)
+    //
+
+    fun shareDiagnosticReport() {
+        val card = uiState.value.installationCard
+        val reporter = DiagnosticReporter(application)
+        val report = reporter.buildReport(
+            operationMode = OperationModeUtils.getOperationModeAsString(session.getOperationMode()),
+            installationDetails = buildInstallationDetails(),
+            errorInfo = buildErrorSummary(card),
+            appLogs = uiState.value.installationLogs,
+        )
+        reporter.share(report)
+    }
+
+    private fun buildInstallationDetails(): String {
+        val card = uiState.value.installationCard
+        val selection = session.userSelection
+        return buildString {
+            appendLine("selected file: ${selection.selectedFileName.ifEmpty { "none" }}")
+            appendLine("file uri: ${selection.selectedFileUri}")
+            appendLine("userdata size (GB): ${selection.getUserDataSizeAsGB()}")
+            appendLine("image size (bytes): ${selection.userSelectedImageSize}")
+            appendLine("checksum status: ${card.checksum.status}")
+            appendLine("sha256: ${card.checksum.value.ifEmpty { "not available" }}")
+            appendLine("expected sha256: ${card.expectedChecksum.ifEmpty { "none" }}")
+            appendLine("checksum mismatch: ${card.checksumMismatch}")
+            appendLine("device patch level: ${card.devicePatchLevel.ifEmpty { "unknown" }}")
+            appendLine("image patch level: ${card.gsiPatchLevel.ifEmpty { "unknown" }}")
+            appendLine("unmount sd card: ${session.preferences.isUnmountSdCard}")
+            appendLine("builtin installer: ${session.preferences.useBuiltinInstaller}")
+            appendLine("diagnostic: ${card.diagnosticType}")
+            append("session: $session")
+        }
+    }
+
+    private fun buildErrorSummary(card: InstallationCardState): String? {
+        if (card.errorText.isBlank() && card.rawError.isBlank()) {
+            return null
+        }
+        return buildString {
+            appendLine("step: ${card.installationStep}")
+            appendLine("diagnostic: ${card.diagnosticType}")
+            appendLine("error: ${card.errorText.ifEmpty { card.rawError }}")
+            append("raw: ${card.rawError}")
+        }
     }
 
     fun saveLogs(uriToSaveLogs: Uri) {
@@ -706,17 +766,49 @@ class HomeViewModel @Inject constructor(
     private fun onPreparationProgressUpdate(progress: Float) =
         updateInstallationCard { it.copy(installationProgress = progress) }
 
-    private fun onInstallationError(error: InstallationStep, errorContent: String) =
+    private fun onInstallationError(error: InstallationStep, errorContent: String) {
+        val diagnosticType = DiagnosticMapper.fromStep(error, errorContent)
         updateInstallationCard {
             if (error == InstallationStep.ERROR_SELINUX && !session.isRoot()) {
                 it.copy(
                     installationStep = InstallationStep.ERROR_SELINUX_ROOTLESS,
                     errorText = errorContent,
+                    diagnosticType = diagnosticType,
+                    rawError = errorContent,
                 )
             } else {
-                it.copy(installationStep = error, errorText = errorContent)
+                it.copy(
+                    installationStep = error,
+                    errorText = errorContent,
+                    diagnosticType = diagnosticType,
+                    rawError = errorContent,
+                )
             }
         }
+    }
+
+    /**
+     * Preparation failures (unreadable/corrupted images, revoked SAF permissions,
+     * missing storage...) used to escape the coroutine and crash the app. They are
+     * now mapped to a regular error card with a diagnostic.
+     */
+    private fun onPreparationFailed(throwable: Throwable) {
+        val diagnosticType = DiagnosticMapper.fromThrowable(throwable)
+        val step = if (diagnosticType == DiagnosticType.CORRUPTED_IMAGE) {
+            InstallationStep.ERROR_CORRUPTED_IMAGE
+        } else {
+            InstallationStep.ERROR
+        }
+        val rawError = throwable.message ?: throwable.toString()
+        updateInstallationCard {
+            it.copy(
+                installationStep = step,
+                errorText = rawError,
+                diagnosticType = diagnosticType,
+                rawError = throwable.toString(),
+            )
+        }
+    }
 
     private fun onInstallationProgressUpdate(progress: Float, partition: String) =
         updateInstallationCard {

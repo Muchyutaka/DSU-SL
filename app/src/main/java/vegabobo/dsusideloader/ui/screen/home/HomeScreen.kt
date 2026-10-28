@@ -179,6 +179,7 @@ fun Home(
             ViewLogsBottomSheet(
                 logs = uiState.installationLogs,
                 onClickSaveLogs = { homeViewModel.saveLogs(it) },
+                onClickShareLogs = { homeViewModel.shareDiagnosticReport() },
                 onDismiss = { homeViewModel.dismissSheet() },
             )
 

@@ -40,7 +40,7 @@
     <string name="checksum_computing">Computing image SHA-256… %1$d%%</string>
     <string name="checksum_unavailable">Could not read the image to compute its SHA-256 checksum.</string>
     <string name="checksum_skipped_warning">SHA-256 verification is disabled, this image was not verified. You can enable it in Settings.</string>
-    <string name="checksum_mismatch_warning">The image checksum does not match the expected value. The file may be corrupted or not the one you expected.</string>
+    <string name="checksum_mismatch_warning">The image checksum does not match the expected value. The file may be corrupted or not the one you expected, download it again from its official source or clear the expected checksum.</string>
     <string name="checksum_mismatch_blocked">Installation blocked: strict checksum mode is enabled and the checksum does not match.</string>
     <string name="checksum_set_expected">Set expected checksum</string>
     <string name="checksum_input_title">Expected SHA-256</string>
@@ -54,7 +54,7 @@
     <string name="patch_level_device">Device: %1$s</string>
     <string name="patch_level_image">Image (from file name): %1$s</string>
     <string name="patch_level_image_unknown">Image: unknown (cannot be determined from the file name)</string>
-    <string name="patch_level_warning">This image looks older than your device security patch level, it may miss recent security fixes.</string>
+    <string name="patch_level_warning">This image looks older than your device security patch level, it may miss recent security fixes, prefer an image built with the same or a newer patch level.</string>
     <string name="patch_level_estimate_note">The image patch level is estimated from its file name and may be inaccurate.</string>
 
     <!-- Installation dialog -->
@@ -118,6 +118,59 @@
 
     <!-- Corrupted image error card -->
     <string name="corrupted_image_error">The selected image looks corrupted or incomplete, please choose a valid GSI file and try again.</string>
+
+    <!-- Smart diagnostics -->
+
+    <!-- SELinux denial -->
+    <string name="diagnostic_selinux_title">SELinux denial</string>
+    <string name="diagnostic_selinux_cause">SELinux is preventing the dynamic system service (gsid) from reaching the storage or block devices it needs.</string>
+    <string name="diagnostic_selinux_fix">Install the DSU Sideloader Magisk module (it ships gsid fixes and sepolicy rules), unmount the SD card, or retry with SELinux permissive (not recommended).</string>
+
+    <!-- Partition creation -->
+    <string name="diagnostic_partition_title">Partition creation failed</string>
+    <string name="diagnostic_partition_cause">The device could not create the dynamic partitions required to hold the image.</string>
+    <string name="diagnostic_partition_fix">Free up storage, discard any existing DSU installation and try again.</string>
+
+    <!-- Corrupted image -->
+    <string name="diagnostic_corrupted_title">Corrupted or incomplete image</string>
+    <string name="diagnostic_corrupted_cause">The selected file could not be read completely, it looks truncated, corrupted or uses an unsupported archive format.</string>
+    <string name="diagnostic_corrupted_fix">Download the image again, verify its SHA-256 checksum and make sure the archive finished downloading before selecting it.</string>
+
+    <!-- Insufficient storage -->
+    <string name="diagnostic_storage_title">Insufficient storage</string>
+    <string name="diagnostic_storage_cause">The dynamic system service needs a large amount of free space (by default 40 percent of the data partition) before it can allocate the image.</string>
+    <string name="diagnostic_storage_fix">Free up storage or lower the userdata size, then try again.</string>
+
+    <!-- Unsupported image -->
+    <string name="diagnostic_unsupported_title">Unsupported image</string>
+    <string name="diagnostic_unsupported_cause">The image format or its architecture does not match what this device supports.</string>
+    <string name="diagnostic_unsupported_fix">Use a GSI built for your device architecture (arm64 or arm) and one of the accepted formats: img, gz, xz or zip (DSU package).</string>
+
+    <!-- SD card allocation -->
+    <string name="diagnostic_sdcard_title">Allocation on SD card failed</string>
+    <string name="diagnostic_sdcard_cause">The image could not be allocated on the external SD card, usually because of filesystem or permission restrictions.</string>
+    <string name="diagnostic_sdcard_fix">Unmount the SD card and retry (you can enable this permanently in Settings), or install the DSU Sideloader Magisk module.</string>
+
+    <!-- Kernel reporting f2fs in an unexpected path -->
+    <string name="diagnostic_f2fs_title">Filesystem features unavailable</string>
+    <string name="diagnostic_f2fs_cause">Your kernel reports f2fs on a path the dynamic system daemon does not expect.</string>
+    <string name="diagnostic_f2fs_fix">Install the DSU Sideloader Magisk module, which ships a gsid binary that handles this, or use another kernel.</string>
+
+    <!-- Image too fragmented -->
+    <string name="diagnostic_extents_title">Image too fragmented</string>
+    <string name="diagnostic_extents_cause">Android 10 requires the image to be stored in fewer than 512 extents, this file is too fragmented.</string>
+    <string name="diagnostic_extents_fix">Install the DSU Sideloader Magisk module, or copy the image again to a less fragmented location.</string>
+
+    <!-- Already running a dynamic system -->
+    <string name="diagnostic_running_dsu_title">Dynamic system already running</string>
+    <string name="diagnostic_running_dsu_cause">A DSU image cannot be installed while the device is already running an installed dynamic system.</string>
+    <string name="diagnostic_running_dsu_fix">Reboot to your device original system image and try again.</string>
+
+    <string name="diagnostic_suggested_fix">Suggested fix</string>
+    <string name="diagnostic_technical_details">Technical details</string>
+    <string name="diagnostic_hide_technical_details">Hide technical details</string>
+    <string name="diagnostic_view_docs">View docs</string>
+    <string name="diagnostic_no_error_details">No error details were captured.</string>
 
     <!-- Other errors card -->
     <string name="failed_create_partition">Failed to create %1$s partition.</string>
@@ -267,6 +320,11 @@
     <string name="installation_logs">Installation logs</string>
     <string name="save_logs">Save logs</string>
     <string name="saved_logs">Logs saved!</string>
+    <string name="share_logs">Share logs</string>
+    <string name="share_logs_title">Share diagnostic report</string>
+    <string name="export_logs_title">Export logs</string>
+    <string name="export_logs_description">Build a diagnostic report (device, app and bounded logs) and share it</string>
+    <string name="diagnostics">Diagnostics</string>
 
     <!--
         Generic and multipurpose strings

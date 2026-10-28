@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import vegabobo.dsusideloader.core.BaseViewModel
+import vegabobo.dsusideloader.diagnostics.DiagnosticReporter
 import vegabobo.dsusideloader.model.Session
 import vegabobo.dsusideloader.preferences.AppPrefs
 import vegabobo.dsusideloader.ui.theme.ThemeMode
@@ -84,6 +85,18 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(themeMode = newThemeMode) }
             }
         }
+    }
+
+    /**
+     * Builds and shares a diagnostic report (device info + bounded logcat).
+     * Nothing is uploaded automatically: the user picks the target app.
+     */
+    fun shareDiagnosticReport() {
+        val reporter = DiagnosticReporter(application)
+        val report = reporter.buildReport(
+            operationMode = checkOperationMode(),
+        )
+        reporter.share(report)
     }
 
     fun isAndroidQ(): Boolean = Build.VERSION.SDK_INT == 29

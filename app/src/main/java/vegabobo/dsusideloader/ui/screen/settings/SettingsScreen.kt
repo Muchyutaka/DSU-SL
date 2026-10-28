@@ -126,6 +126,13 @@ fun Settings(
             onClick = { settingsViewModel.togglePreference(AppPrefs.CHECK_PATCH_LEVEL, !it) },
         )
 
+        Title(title = stringResource(id = R.string.diagnostics))
+        PreferenceItem(
+            title = stringResource(id = R.string.export_logs_title),
+            description = stringResource(id = R.string.export_logs_description),
+            onClick = { settingsViewModel.shareDiagnosticReport() },
+        )
+
         Title(title = stringResource(id = R.string.appearance))
         PreferenceItem(
             title = stringResource(id = R.string.theme_title),

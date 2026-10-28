@@ -71,7 +71,7 @@ Jobs:
 
 | Job | What it does |
 | --- | --- |
-| `Assemble debug APK` | `./gradlew assembleDebug`, then `./gradlew testDebugUnitTest`, verifies the tests actually executed (a green but empty test run fails the job), uploads the `dsu-sideloader-debug-apk` and `unit-test-reports` artifacts |
+| `Assemble debug APK` | `./gradlew assembleDebug`, then `./gradlew testDebugUnitTest`, verifies the tests actually executed (a green but empty test run fails the job), then `./gradlew assembleRelease` as a R8/ProGuard compile check, and uploads the `dsu-sideloader-debug-apk` and `unit-test-reports` artifacts |
 | `Assemble release APK (tags)` | only on `v*` tags: `./gradlew assembleRelease`, uploads `dsu-sideloader-release-apk` and attaches the APK to the tag's GitHub Release |
 
 **How to download the CI built APK:** open the Actions tab → pick the workflow run → scroll to *Artifacts* → download `dsu-sideloader-debug-apk` (downloads require being signed in to GitHub). Every artifact is built from the commit shown in the run.

@@ -72,6 +72,12 @@ jobs:
               raise SystemExit("unit tests failed")
           PY
 
+      # Tagged releases are built with R8 (minify + resource shrinking) enabled,
+      # so make sure the release variant keeps assembling without signing
+      # secrets. This catches shrinking/ProGuard problems before the first tag.
+      - name: Assemble release APK (compile check)
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v7
         with:

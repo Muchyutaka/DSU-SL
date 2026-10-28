@@ -102,11 +102,20 @@ object PatchLevelUtils {
         return null
     }
 
+    /**
+     * Compares an estimated image patch level with the device one.
+     *
+     * The comparison is done per month: security patch levels are monthly, and
+     * the day differs between vendors (the 1st, the 5th, ...), so a day level
+     * comparison would report a false "older" warning for the same month.
+     */
     fun compare(device: PatchLevel?, image: PatchLevel?): PatchLevelComparison {
         if (device == null || image == null) {
             return PatchLevelComparison.UNKNOWN
         }
-        return if (image < device) {
+        val deviceMonth = device.year * 100 + device.month
+        val imageMonth = image.year * 100 + image.month
+        return if (imageMonth < deviceMonth) {
             PatchLevelComparison.GSI_OLDER
         } else {
             PatchLevelComparison.GSI_SAME_OR_NEWER

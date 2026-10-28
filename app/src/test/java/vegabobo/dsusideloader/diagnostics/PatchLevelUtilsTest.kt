@@ -59,9 +59,16 @@ class PatchLevelUtilsTest {
             PatchLevelComparison.GSI_OLDER,
             PatchLevelUtils.compare(device, PatchLevel(2023, 7, 1)),
         )
+        // Same month, different day: security patch levels are monthly, so this
+        // must not be reported as older.
         assertEquals(
             PatchLevelComparison.GSI_SAME_OR_NEWER,
             PatchLevelUtils.compare(device, PatchLevel(2023, 8, 1)),
+        )
+        // Previous month with a later day is still older.
+        assertEquals(
+            PatchLevelComparison.GSI_OLDER,
+            PatchLevelUtils.compare(PatchLevel(2023, 8, 1), PatchLevel(2023, 7, 31)),
         )
         assertEquals(
             PatchLevelComparison.GSI_SAME_OR_NEWER,

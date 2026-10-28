@@ -25,6 +25,7 @@ fun NotInstallingCardContent(
     uiState: InstallationCardState,
     onClickClear: () -> Unit,
     onClickInstall: () -> Unit,
+    onClickSetExpectedChecksum: () -> Unit = {},
 ) {
     FileSelectionBox(
         textFieldInteraction = textFieldInteraction,
@@ -33,6 +34,10 @@ fun NotInstallingCardContent(
         isReadOnly = true,
         textFieldValue = uiState.text,
         textFieldTitle = stringResource(id = R.string.select_gsi_info),
+    )
+    VerificationInfo(
+        uiState = uiState,
+        onClickSetExpectedChecksum = onClickSetExpectedChecksum,
     )
     Spacer(modifier = Modifier.padding(top = 10.dp))
     Row(
@@ -57,7 +62,7 @@ fun NotInstallingCardContent(
         PrimaryButton(
             text = stringResource(R.string.install),
             onClick = onClickInstall,
-            isEnabled = uiState.isInstallable,
+            isEnabled = uiState.isInstallable && !uiState.isInstallBlocked(),
         )
     }
 }

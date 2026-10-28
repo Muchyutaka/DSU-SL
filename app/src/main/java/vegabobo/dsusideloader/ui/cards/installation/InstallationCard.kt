@@ -30,6 +30,7 @@ fun InstallationCard(
     onSelectFileSuccess: (Uri) -> Unit,
     onClickViewLogs: () -> Unit,
     onClickViewCommands: () -> Unit,
+    onClickSetExpectedChecksum: () -> Unit = {},
 ) {
     var chooseFile = Intent(Intent.ACTION_OPEN_DOCUMENT)
     chooseFile.type = "*/*"
@@ -72,6 +73,7 @@ fun InstallationCard(
             onClickRebootToDynOS = onClickRebootToDynOS,
             onClickViewLogs = onClickViewLogs,
             onClickViewCommands = onClickViewCommands,
+            onClickSetExpectedChecksum = onClickSetExpectedChecksum,
             minPercentageOfFreeStorage = minPercentageOfFreeStorage,
         )
     }

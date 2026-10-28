@@ -18,10 +18,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import vegabobo.dsusideloader.BuildConfig
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.core.StorageManager
+import vegabobo.dsusideloader.diagnostics.ChecksumUtils
+import vegabobo.dsusideloader.diagnostics.PatchLevelComparison
+import vegabobo.dsusideloader.diagnostics.PatchLevelUtils
 import vegabobo.dsusideloader.installer.adb.AdbInstallationHandler
 import vegabobo.dsusideloader.installer.privileged.DsuInstallationHandler
 import vegabobo.dsusideloader.installer.privileged.LogcatDiagnostic
@@ -33,6 +39,7 @@ import vegabobo.dsusideloader.preparation.InstallationStep
 import vegabobo.dsusideloader.preparation.Preparation
 import vegabobo.dsusideloader.service.PrivilegedProvider
 import vegabobo.dsusideloader.util.DevicePropUtils
+import vegabobo.dsusideloader.util.FileChecksum
 import vegabobo.dsusideloader.util.FilenameUtils
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
@@ -58,6 +65,10 @@ class HomeViewModel @Inject constructor(
 
     var installationJob: Job = Job()
     var logger: LogcatDiagnostic? = null
+    private var checksumJob: Job? = null
+
+    /** Prevents recording the same installation twice in the history. */
+    private var historyRecorded = false
 
     private val allocPercentage = DevicePropUtils.getGsidBinaryAllowedPerc()
     val allocPercentageInt = String.format("%.0f", allocPercentage * 100).toInt()
@@ -85,13 +96,17 @@ class HomeViewModel @Inject constructor(
     private fun updateSheetState(sheetDisplay: SheetDisplayState) =
         _uiState.update { it.copy(sheetDisplay = sheetDisplay) }
 
-    fun resetInstallationCard() =
+    fun resetInstallationCard() {
+        checksumJob?.cancel()
+        checksumJob = null
+        historyRecorded = false
         _uiState.update {
             it.copy(
                 installationCard = InstallationCardState(),
                 sheetDisplay = SheetDisplayState.NONE,
             )
         }
+    }
 
     fun dismissSheet() = updateSheetState(SheetDisplayState.NONE)
 
@@ -162,6 +177,9 @@ class HomeViewModel @Inject constructor(
 
             disabledStorageCheck = readBoolPref(AppPrefs.DISABLE_STORAGE_CHECK)
             Log.d(tag, "disabledStorageCheck: $shouldKeepScreenOn")
+
+            val strictChecksum = readBoolPref(AppPrefs.STRICT_CHECKSUM)
+            updateInstallationCard { it.copy(strictChecksum = strictChecksum) }
         }
     }
 
@@ -197,12 +215,21 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onClickInstall() {
+        if (uiState.value.installationCard.isInstallBlocked()) {
+            Log.d(tag, "Installation blocked: strict checksum mode and mismatching checksum")
+            return
+        }
         session.userSelection.setUserDataSize(uiState.value.userDataCard.text)
         session.userSelection.setImageSize(uiState.value.imageSizeCard.text)
         updateSheetState(SheetDisplayState.CONFIRM_INSTALLATION)
     }
 
     fun onConfirmInstallationSheet() {
+        if (uiState.value.installationCard.isInstallBlocked()) {
+            dismissSheet()
+            return
+        }
+        historyRecorded = false
         dismissSheet()
         updateInstallationCard { it.copy(installationStep = InstallationStep.PROCESSING) }
         installationJob = Job()
@@ -482,6 +509,148 @@ class HomeViewModel @Inject constructor(
                 isInstallable = true,
             )
         }
+
+        startVerification(filename)
+    }
+
+    //
+    // Image verification (SHA-256 and security patch level)
+    //
+
+    private fun startVerification(filename: String) {
+        checksumJob?.cancel()
+        checksumJob = null
+        updatePatchLevelInfo(filename)
+        startChecksumComputation()
+    }
+
+    private fun startChecksumComputation() {
+        checksumJob = viewModelScope.launch {
+            val verifyChecksum = readBoolPref(AppPrefs.VERIFY_CHECKSUM, true)
+            val strictChecksum = readBoolPref(AppPrefs.STRICT_CHECKSUM)
+            updateInstallationCard { it.copy(strictChecksum = strictChecksum) }
+
+            if (!verifyChecksum) {
+                Log.d(tag, "SHA-256 verification is disabled")
+                updateInstallationCard {
+                    it.copy(checksum = ChecksumState(status = ChecksumStatus.SKIPPED))
+                }
+                return@launch
+            }
+
+            val uri = session.userSelection.selectedFileUri
+            if (uri == Uri.EMPTY) {
+                return@launch
+            }
+
+            val totalBytes = try {
+                withContext(Dispatchers.IO) { storageManager.getFilesizeFromUri(uri) }
+            } catch (e: Exception) {
+                Log.w(tag, "Unable to obtain file size for checksum progress", e)
+                -1L
+            }
+
+            updateInstallationCard {
+                it.copy(checksum = ChecksumState(status = ChecksumStatus.COMPUTING))
+            }
+
+            try {
+                val hash = withContext(Dispatchers.IO) {
+                    FileChecksum.computeSha256(
+                        contentResolver = application.contentResolver,
+                        uri = uri,
+                        totalBytes = totalBytes,
+                        isCancelled = { !isActive },
+                        onProgress = { progress -> updateChecksumProgress(progress) },
+                    )
+                }
+                updateInstallationCard {
+                    it.copy(checksum = ChecksumState(ChecksumStatus.READY, 1F, hash))
+                }
+                updateChecksumMismatch()
+            } catch (e: CancellationException) {
+                Log.d(tag, "SHA-256 computation cancelled")
+                throw e
+            } catch (e: Exception) {
+                Log.w(tag, "Unable to compute SHA-256", e)
+                updateInstallationCard {
+                    it.copy(checksum = ChecksumState(status = ChecksumStatus.FAILED))
+                }
+            }
+        }
+    }
+
+    private fun updateChecksumProgress(progress: Float) =
+        updateInstallationCard {
+            it.copy(checksum = it.checksum.copy(progress = progress))
+        }
+
+    private fun updateChecksumMismatch() {
+        val card = uiState.value.installationCard
+        val actual = card.checksum.value
+        val mismatch = card.expectedChecksum.isNotEmpty() &&
+            actual.isNotEmpty() &&
+            !ChecksumUtils.matches(card.expectedChecksum, actual)
+        updateInstallationCard { it.copy(checksumMismatch = mismatch) }
+    }
+
+    private fun updatePatchLevelInfo(filename: String) {
+        viewModelScope.launch {
+            if (!readBoolPref(AppPrefs.CHECK_PATCH_LEVEL, true)) {
+                updateInstallationCard { it.copy(patchLevelChecked = false, patchLevelWarning = false) }
+                return@launch
+            }
+
+            val devicePatchLevel = PatchLevelUtils.parse(Build.VERSION.SECURITY_PATCH)
+            val imagePatchLevel = PatchLevelUtils.parseFromFileName(filename)
+            val comparison = PatchLevelUtils.compare(devicePatchLevel, imagePatchLevel)
+            Log.d(
+                tag,
+                "patch level: device=$devicePatchLevel image=$imagePatchLevel comparison=$comparison",
+            )
+
+            updateInstallationCard {
+                it.copy(
+                    devicePatchLevel = devicePatchLevel?.toIsoString().orEmpty(),
+                    gsiPatchLevel = imagePatchLevel?.toIsoString().orEmpty(),
+                    patchLevelChecked = true,
+                    patchLevelWarning = comparison == PatchLevelComparison.GSI_OLDER,
+                )
+            }
+        }
+    }
+
+    fun showExpectedChecksumSheet() {
+        _uiState.update {
+            it.copy(
+                sheetDisplay = SheetDisplayState.EXPECTED_CHECKSUM,
+                expectedChecksumInput = it.installationCard.expectedChecksum,
+                expectedChecksumInputError = false,
+            )
+        }
+    }
+
+    fun updateExpectedChecksumInput(input: String) {
+        _uiState.update {
+            it.copy(expectedChecksumInput = input, expectedChecksumInputError = false)
+        }
+    }
+
+    fun onConfirmExpectedChecksum() {
+        val input = uiState.value.expectedChecksumInput
+        if (input.isNotBlank() && !ChecksumUtils.isValid(input)) {
+            _uiState.update { it.copy(expectedChecksumInputError = true) }
+            return
+        }
+        updateInstallationCard { it.copy(expectedChecksum = ChecksumUtils.canonical(input)) }
+        updateChecksumMismatch()
+        dismissSheet()
+    }
+
+    fun onClearExpectedChecksum() {
+        updateInstallationCard { it.copy(expectedChecksum = "") }
+        updateChecksumMismatch()
+        dismissSheet()
     }
 
     //

@@ -1,6 +1,30 @@
 package vegabobo.dsusideloader.ui.screen.home
 
+import vegabobo.dsusideloader.diagnostics.DiagnosticType
 import vegabobo.dsusideloader.preparation.InstallationStep
+
+enum class ChecksumStatus {
+    /** No image selected yet, or checksum computation was not requested. */
+    NONE,
+
+    /** Computing. */
+    COMPUTING,
+
+    /** Computed successfully, [ChecksumState.value] holds the hash. */
+    READY,
+
+    /** Verification is disabled in settings. */
+    SKIPPED,
+
+    /** The image could not be read. */
+    FAILED,
+}
+
+data class ChecksumState(
+    val status: ChecksumStatus = ChecksumStatus.NONE,
+    val progress: Float = 0F,
+    val value: String = "",
+)
 
 data class InstallationCardState(
     val installationStep: InstallationStep = InstallationStep.NOT_INSTALLING,
@@ -12,7 +36,36 @@ data class InstallationCardState(
     val isProgressBarIndeterminate: Boolean = false,
     val installationProgress: Float = 0F,
     val currentPartitionText: String = "",
-)
+
+    // Image verification
+    val checksum: ChecksumState = ChecksumState(),
+    val expectedChecksum: String = "",
+    val checksumMismatch: Boolean = false,
+    val strictChecksum: Boolean = false,
+
+    // Security patch level
+    val devicePatchLevel: String = "",
+    val gsiPatchLevel: String = "",
+    val patchLevelChecked: Boolean = false,
+    val patchLevelWarning: Boolean = false,
+
+    // Diagnostics
+    val diagnosticType: DiagnosticType = DiagnosticType.UNKNOWN,
+    val rawError: String = "",
+) {
+
+    /**
+     * Strict checksum mode blocks the installation when the user provided an
+     * expected checksum that does not match the image, or while the checksum is
+     * still being computed for an image with an expected checksum.
+     */
+    fun isInstallBlocked(): Boolean {
+        if (!strictChecksum || expectedChecksum.isEmpty()) {
+            return false
+        }
+        return checksum.status == ChecksumStatus.COMPUTING || checksumMismatch
+    }
+}
 
 data class UserDataCardState(
     val isSelected: Boolean = false,
@@ -43,6 +96,7 @@ enum class SheetDisplayState {
     CANCEL_INSTALLATION,
     DISCARD_DSU,
     VIEW_LOGS,
+    EXPECTED_CHECKSUM,
 }
 
 data class HomeUiState(
@@ -54,6 +108,8 @@ data class HomeUiState(
     val installationLogs: String = "",
     val passedInitialChecks: Boolean = false,
     val shouldKeepScreenOn: Boolean = false,
+    val expectedChecksumInput: String = "",
+    val expectedChecksumInputError: Boolean = false,
 ) {
     fun isInstalling(): Boolean {
         return installationCard.installationStep != InstallationStep.NOT_INSTALLING

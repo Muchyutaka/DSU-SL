@@ -25,6 +25,7 @@ fun InstallationCardStep(
     onClickRebootToDynOS: () -> Unit,
     onClickViewLogs: () -> Unit,
     onClickViewCommands: () -> Unit,
+    onClickSetExpectedChecksum: () -> Unit = {},
 ) {
     when (uiState.installationStep) {
         InstallationStep.NOT_INSTALLING ->
@@ -33,6 +34,7 @@ fun InstallationCardStep(
                 uiState = uiState,
                 onClickClear = onClickClear,
                 onClickInstall = onClickInstall,
+                onClickSetExpectedChecksum = onClickSetExpectedChecksum,
             )
         InstallationStep.DSU_ALREADY_INSTALLED ->
             ProgressableCardContent(

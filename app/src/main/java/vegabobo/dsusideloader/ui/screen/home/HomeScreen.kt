@@ -34,6 +34,7 @@ import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.sdialogs.CancelSheet
 import vegabobo.dsusideloader.ui.sdialogs.ConfirmInstallationSheet
 import vegabobo.dsusideloader.ui.sdialogs.DiscardDSUSheet
+import vegabobo.dsusideloader.ui.sdialogs.ExpectedChecksumSheet
 import vegabobo.dsusideloader.ui.sdialogs.ImageSizeWarningSheet
 import vegabobo.dsusideloader.ui.sdialogs.ViewLogsBottomSheet
 import vegabobo.dsusideloader.ui.util.KeepScreenOn
@@ -123,6 +124,7 @@ fun Home(
                     onClickRebootToDynOS = { homeViewModel.onClickRebootToDynOS() },
                     onClickViewLogs = { homeViewModel.showLogsWarning() },
                     onClickViewCommands = { navigate(Destinations.ADBInstallation) },
+                    onClickSetExpectedChecksum = { homeViewModel.showExpectedChecksumSheet() },
                     minPercentageOfFreeStorage = homeViewModel.allocPercentageInt.toString(),
                 )
                 UserdataCard(
@@ -177,6 +179,17 @@ fun Home(
             ViewLogsBottomSheet(
                 logs = uiState.installationLogs,
                 onClickSaveLogs = { homeViewModel.saveLogs(it) },
+                onDismiss = { homeViewModel.dismissSheet() },
+            )
+
+        SheetDisplayState.EXPECTED_CHECKSUM ->
+            ExpectedChecksumSheet(
+                input = uiState.expectedChecksumInput,
+                isError = uiState.expectedChecksumInputError,
+                hasExpectedChecksum = uiState.installationCard.expectedChecksum.isNotEmpty(),
+                onValueChange = { homeViewModel.updateExpectedChecksumInput(it) },
+                onClickConfirm = { homeViewModel.onConfirmExpectedChecksum() },
+                onClickRemove = { homeViewModel.onClearExpectedChecksum() },
                 onDismiss = { homeViewModel.dismissSheet() },
             )
 

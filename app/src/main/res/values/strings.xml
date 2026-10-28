@@ -34,6 +34,29 @@
     <string name="clear">Clear</string>
     <string name="install">Install</string>
 
+    <!-- Image verification -->
+    <string name="checksum_sha256">SHA-256</string>
+    <string name="checksum_expected">Expected</string>
+    <string name="checksum_computing">Computing image SHA-256… %1$d%%</string>
+    <string name="checksum_unavailable">Could not read the image to compute its SHA-256 checksum.</string>
+    <string name="checksum_skipped_warning">SHA-256 verification is disabled, this image was not verified. You can enable it in Settings.</string>
+    <string name="checksum_mismatch_warning">The image checksum does not match the expected value. The file may be corrupted or not the one you expected.</string>
+    <string name="checksum_mismatch_blocked">Installation blocked: strict checksum mode is enabled and the checksum does not match.</string>
+    <string name="checksum_set_expected">Set expected checksum</string>
+    <string name="checksum_input_title">Expected SHA-256</string>
+    <string name="checksum_input_description">Paste the SHA-256 checksum you expect for this image. It is only compared locally, nothing is uploaded.</string>
+    <string name="checksum_input_label">SHA-256 checksum</string>
+    <string name="checksum_input_invalid">This is not a valid SHA-256 checksum.</string>
+    <string name="checksum_verify">Verify</string>
+    <string name="checksum_remove">Remove</string>
+
+    <string name="patch_level_title">Security patch level</string>
+    <string name="patch_level_device">Device: %1$s</string>
+    <string name="patch_level_image">Image (from file name): %1$s</string>
+    <string name="patch_level_image_unknown">Image: unknown (cannot be determined from the file name)</string>
+    <string name="patch_level_warning">This image looks older than your device security patch level, it may miss recent security fixes.</string>
+    <string name="patch_level_estimate_note">The image patch level is estimated from its file name and may be inaccurate.</string>
+
     <!-- Installation dialog -->
     <string name="proceed_installation">Proceed installation?</string>
     <string name="proceed_installation_description">Installation will be made using the parameters shown below:</string>
@@ -162,6 +185,15 @@
     <string name="keep_screen_on">Keep screen on</string>
 
     <string name="developer_options">Developer options</string>
+
+    <!-- Verification settings -->
+    <string name="verification">Verification</string>
+    <string name="verify_checksum_title">Verify SHA-256</string>
+    <string name="verify_checksum_description">Compute the image checksum before installing</string>
+    <string name="strict_checksum_title">Strict checksum mode</string>
+    <string name="strict_checksum_description">Block installation when an expected checksum does not match</string>
+    <string name="check_patch_level_title">Security patch check</string>
+    <string name="check_patch_level_description">Warn when the image looks older than the device patch level</string>
 
     <!-- Appearance settings -->
     <string name="appearance">Appearance</string>

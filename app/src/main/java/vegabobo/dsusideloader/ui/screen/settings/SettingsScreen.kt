@@ -102,6 +102,30 @@ fun Settings(
             }
         }
 
+        Title(title = stringResource(id = R.string.verification))
+        PreferenceItem(
+            title = stringResource(id = R.string.verify_checksum_title),
+            description = stringResource(id = R.string.verify_checksum_description),
+            showToggle = true,
+            isChecked = uiState.preferences[AppPrefs.VERIFY_CHECKSUM]!!,
+            onClick = { settingsViewModel.togglePreference(AppPrefs.VERIFY_CHECKSUM, !it) },
+        )
+        PreferenceItem(
+            title = stringResource(id = R.string.strict_checksum_title),
+            description = stringResource(id = R.string.strict_checksum_description),
+            showToggle = true,
+            isEnabled = uiState.preferences[AppPrefs.VERIFY_CHECKSUM]!!,
+            isChecked = uiState.preferences[AppPrefs.STRICT_CHECKSUM]!!,
+            onClick = { settingsViewModel.togglePreference(AppPrefs.STRICT_CHECKSUM, !it) },
+        )
+        PreferenceItem(
+            title = stringResource(id = R.string.check_patch_level_title),
+            description = stringResource(id = R.string.check_patch_level_description),
+            showToggle = true,
+            isChecked = uiState.preferences[AppPrefs.CHECK_PATCH_LEVEL]!!,
+            onClick = { settingsViewModel.togglePreference(AppPrefs.CHECK_PATCH_LEVEL, !it) },
+        )
+
         Title(title = stringResource(id = R.string.appearance))
         PreferenceItem(
             title = stringResource(id = R.string.theme_title),

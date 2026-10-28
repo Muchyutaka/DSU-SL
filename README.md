@@ -156,13 +156,22 @@ Every attempt records timestamp, image file name, userdata size, image size, res
 
 ### Theming
 
-- Material You dynamic color on Android 12+ (can be disabled).
+- Material You dynamic color on Android 12+ (can be disabled). The palette is taken from the wallpaper with the same `when` branch the Android samples use: dynamic scheme on API 31+, static teal scheme otherwise.
+- The dark theme background is always pure black (`Color(0xFF000000)`); the Material You accents still drive every card, badge and button.
 - Theme mode: follow system, light or dark (Settings → Appearance).
-- AMOLED black option that forces true black surfaces when dark theme is active, keeping the contrast of the generated color scheme.
+- AMOLED black option that also flattens the surfaces when the dark theme is active, keeping the contrast of the generated color scheme.
+- No hardcoded colors in the screens: everything reads from `MaterialTheme.colorScheme`.
+
+## Interface and navigation
+
+- **Splash**: the app icon fades in, holds for a moment and then fades out while sliding left off the screen. Skipped when the system asks for reduced motion.
+- **Onboarding (three steps)**: *choose a method* → *finish its setup* (numbered instructions plus the live check/grant action) → *ready*. Every step change animates with `AnimatedContent`: the outgoing step fades out while sliding left, the incoming one fades in from the right, and the same pair of animations plays when the flow hands over to the main screen.
+- **Main screen**: monospace title, access status card (verified check mark or a warning icon, with a refresh button), the three outline pills *Select Image* / *Re-check Access* / *Change Method*, the selected image card, a full width *Prepare & Install* button (disabled until an image is ready), the *Optional System Tweaks* card and a collapsible *What is DSU?* section. While an installation runs the detailed installation card replaces the image card.
+- **Bottom navigation**: Main, Log and Settings. The Log tab shows the installation log as monospace lines and offers the same explicit share/clear actions as the bottom sheet — nothing is uploaded automatically. The bar hides itself on detail screens (installation commands, about, libraries, history, onboarding).
 
 ## Choosing an access method
 
-On first launch the app asks how it may install a DSU and **verifies the answer** before it lets you continue. The choice is stored in the app preferences, and it is validated again on every start: if the method stopped working (Shizuku killed, root revoked) the onboarding screen comes back instead of silently falling back to another method.
+On first launch the app walks through three steps: pick how it may install a DSU, follow that method's setup instructions, and confirm. The answer is **verified** before it lets you continue. The choice is stored in the app preferences, and it is validated again on every start: if the method stopped working (Shizuku killed, root revoked) the onboarding screen comes back instead of silently falling back to another method.
 
 | Method | What is checked (real API) | What you can do when it fails |
 | --- | --- | --- |

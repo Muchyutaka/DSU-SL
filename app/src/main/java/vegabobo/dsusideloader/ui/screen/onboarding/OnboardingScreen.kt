@@ -26,8 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +46,7 @@ import vegabobo.dsusideloader.access.AccessGateState
 import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.access.AccessStatus
 import vegabobo.dsusideloader.ui.components.AccessMethodCard
+import vegabobo.dsusideloader.ui.components.TopBar
 import vegabobo.dsusideloader.ui.components.access.accessMethodSummary
 import vegabobo.dsusideloader.ui.components.access.accessMethodTitle
 import vegabobo.dsusideloader.ui.screen.Destinations
@@ -98,13 +97,7 @@ fun Onboarding(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(id = R.string.choose_access_method)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-            )
+            TopBar(barTitle = stringResource(id = R.string.choose_access_method))
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->

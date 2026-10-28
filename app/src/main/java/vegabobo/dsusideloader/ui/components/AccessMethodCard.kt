@@ -8,7 +8,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -192,8 +191,7 @@ fun AccessMethodCard(
             ) {
                 AnimatedVisibility(
                     visible = result.status == AccessStatus.AVAILABLE,
-                    enter = fadeIn(tween(motionDuration(200))) +
-                        scaleIn(tween(motionDuration(220)), initialScale = 0.6f),
+                    enter = fadeIn(tween(motionDuration(200))),
                     exit = fadeOut(tween(motionDuration(120))),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

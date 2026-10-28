@@ -13,6 +13,7 @@ import vegabobo.dsusideloader.access.AccessController
 import vegabobo.dsusideloader.access.AccessGateState
 import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.access.AccessStatus
+import vegabobo.dsusideloader.ui.components.access.AccessPrimaryAction
 
 /**
  * Drives the onboarding screen. All the real checks live in [AccessController]

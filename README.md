@@ -71,7 +71,7 @@ Jobs:
 
 | Job | What it does |
 | --- | --- |
-| `Assemble debug APK` | `./gradlew assembleDebug`, then `./gradlew testDebugUnitTest`, uploads the `dsu-sideloader-debug-apk` and `unit-test-reports` artifacts |
+| `Assemble debug APK` | `./gradlew assembleDebug`, then `./gradlew testDebugUnitTest`, verifies the tests actually executed (a green but empty test run fails the job), uploads the `dsu-sideloader-debug-apk` and `unit-test-reports` artifacts |
 | `Assemble release APK (tags)` | only on `v*` tags: `./gradlew assembleRelease`, uploads `dsu-sideloader-release-apk` and attaches the APK to the tag's GitHub Release |
 
 **How to download the CI built APK:** open the Actions tab → pick the workflow run → scroll to *Artifacts* → download `dsu-sideloader-debug-apk` (downloads require being signed in to GitHub). Every artifact is built from the commit shown in the run.
@@ -98,7 +98,9 @@ The release job signs the APK only when these repository secrets are configured 
 
 When the secrets are absent the workflow still builds and attaches an **unsigned** `app-release-unsigned.apk`, so forks can produce release artifacts without key material.
 
-The workflow uses a `concurrency` group to cancel superseded runs and requests `contents: read` by default (the release job opts into `contents: write` to publish the release).
+The workflow uses a `concurrency` group to cancel superseded runs and requests `contents: read` by default (the release job opts into `contents: write` to publish the release). The unit test totals are written to the run summary, so a run that executed zero tests is obvious at a glance.
+
+The unit tests live in `app/src/test` and only cover plain Kotlin logic (checksum normalisation, patch level parsing and comparison, error classification, log formatting, history model) so they need neither an emulator nor Robolectric.
 
 ## Installation safety, diagnostics and history
 

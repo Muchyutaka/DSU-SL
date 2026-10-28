@@ -24,16 +24,16 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -44,8 +44,36 @@ jobs:
       - name: Run unit tests
         run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
 
+      # A green test task is not enough: Gradle happily succeeds when the test
+      # source set is empty or when no test matched. Fail loudly instead and
+      # surface the totals on the run summary.
+      - name: Verify unit tests actually ran
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          total = 0
+          failed = 0
+          for path in glob.glob("app/build/test-results/testDebugUnitTest/TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              total += int(root.get("tests") or 0)
+              failed += int(root.get("failures") or 0) + int(root.get("errors") or 0)
+
+          print(f"executed {total} unit test(s), {failed} failure(s)")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"Unit tests: {total} executed, {failed} failed\n")
+
+          if total == 0:
+              raise SystemExit("no unit tests were executed")
+          if failed:
+              raise SystemExit("unit tests failed")
+          PY
+
       - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dsu-sideloader-debug-apk
           path: app/build/outputs/apk/debug/*.apk
@@ -54,7 +82,7 @@ jobs:
 
       - name: Upload unit test reports
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-test-reports
           path: app/build/reports/tests/testDebugUnitTest
@@ -78,16 +106,16 @@ jobs:
       KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -119,7 +147,7 @@ jobs:
           ls -l artifacts
 
       - name: Upload release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dsu-sideloader-release-apk
           path: artifacts/*.apk

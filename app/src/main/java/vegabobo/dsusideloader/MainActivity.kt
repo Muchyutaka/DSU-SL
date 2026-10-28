@@ -9,7 +9,16 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -18,6 +27,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -42,10 +54,12 @@ import vegabobo.dsusideloader.service.PrivilegedService
 import vegabobo.dsusideloader.service.PrivilegedSystemService
 import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.screen.Navigation
+import vegabobo.dsusideloader.ui.splash.SplashScreen
 import vegabobo.dsusideloader.ui.theme.AppearanceViewModel
 import vegabobo.dsusideloader.ui.theme.DSUHelperTheme
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
+import vegabobo.dsusideloader.ui.util.motionDuration
 import vegabobo.dsusideloader.util.collectAsStateWithLifecycle
 
 @AndroidEntryPoint
@@ -216,16 +230,20 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
                 dynamicColor = appearanceState.dynamicColor,
                 amoledDark = appearanceState.amoledDark,
             ) {
-                when (val gate = gateState) {
-                    is AccessGateState.Confirmed -> Navigation(
-                        startDestination = Destinations.Homepage,
-                    )
+                // Guarded by rememberSaveable so a configuration change does
+                // not replay the launch animation.
+                var showSplash by rememberSaveable { mutableStateOf(true) }
 
-                    is AccessGateState.NeedsOnboarding -> Navigation(
-                        startDestination = Destinations.Onboarding,
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                ) {
+                    AccessGateContent(gateState)
 
-                    AccessGateState.Loading -> AccessGateLoading()
+                    if (showSplash) {
+                        SplashScreen(onFinished = { showSplash = false })
+                    }
                 }
             }
         }
@@ -255,6 +273,43 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         appliedMode = null
     }
 }
+
+/**
+ * Switches between the onboarding graph and the main graph.
+ *
+ * The two graphs are separate [Navigation] instances because the start
+ * destination differs, so the swap is animated here: the outgoing graph fades
+ * out while sliding left, the incoming one fades in from the right. That is the
+ * same pair of animations the onboarding steps use internally.
+ */
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun AccessGateContent(gateState: AccessGateState) {
+    val destination = when (gateState) {
+        is AccessGateState.Confirmed -> Destinations.Homepage
+        is AccessGateState.NeedsOnboarding -> Destinations.Onboarding
+        AccessGateState.Loading -> GATE_LOADING
+    }
+    val enterMillis = motionDuration(320)
+    val exitMillis = motionDuration(280)
+
+    AnimatedContent(
+        targetState = destination,
+        transitionSpec = {
+            (slideInHorizontally(tween(enterMillis)) { it } + fadeIn(tween(enterMillis))) with
+                (slideOutHorizontally(tween(exitMillis)) { -it / 4 } + fadeOut(tween(exitMillis)))
+        },
+    ) { target ->
+        if (target == GATE_LOADING) {
+            AccessGateLoading()
+        } else {
+            Navigation(startDestination = target)
+        }
+    }
+}
+
+/** Marker target for the few frames the access gate is still resolving. */
+private const val GATE_LOADING = "gate_loading"
 
 /** Shown for the few frames the persisted access method is being validated. */
 @Composable

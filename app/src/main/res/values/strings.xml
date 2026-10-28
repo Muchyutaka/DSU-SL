@@ -477,4 +477,41 @@
     <string name="update_error_download">The download failed or was interrupted.</string>
     <string name="update_error_checksum">The downloaded APK does not match the published SHA-256, it was deleted. Try again.</string>
     <string name="update_error_install">Android does not allow this app to install packages yet. Allow it in the settings, then install again.</string>
+    <!-- Main screen -->
+    <string name="main_header_subtitle">Sideload a GSI without unlocking your bootloader</string>
+    <string name="main_status_label">Access method</string>
+    <string name="main_status_verified">Verified</string>
+    <string name="main_status_how_to_fix">This method needs attention before installing.</string>
+    <string name="main_action_select_image">Select Image</string>
+    <string name="main_action_recheck">Re-check Access</string>
+    <string name="main_action_change_method">Change Method</string>
+    <string name="main_image_card_title">Selected DSU Image</string>
+    <string name="main_image_none">Image: No image selected</string>
+    <string name="main_image_selected">Image: %1$s</string>
+    <string name="main_image_hint">Tap to select an image file (.img)</string>
+    <string name="main_install">Prepare &amp; Install</string>
+    <string name="main_tweaks_title">Optional System Tweaks</string>
+
+    <!-- Logs tab -->
+    <string name="log_title">Log</string>
+    <string name="log_subtitle">Live output of the last installation and diagnostics report</string>
+    <string name="log_empty">No log lines yet. They appear here while the app prepares and installs an image.</string>
+    <string name="log_share">Share report</string>
+    <string name="log_clear">Clear</string>
+    <!-- Onboarding steps -->
+    <string name="onboarding_setup_title">Finish the setup</string>
+    <string name="onboarding_setup_subtitle">These steps make %1$s work on this device.</string>
+    <string name="onboarding_setup_adb_step_1">Enable Developer options, then turn on USB debugging or Wireless debugging.</string>
+    <string name="onboarding_setup_adb_step_2">Connect this device to a computer with adb installed, and authorize the computer.</string>
+    <string name="onboarding_setup_adb_step_3">After installing from the app, run the generated command in that adb shell.</string>
+    <string name="onboarding_setup_shizuku_step_1">Install Shizuku from shizuku.rikka.app if it is not installed yet.</string>
+    <string name="onboarding_setup_shizuku_step_2">Start Shizuku (wireless debugging on Android 11+ or adb from a computer), then keep it running.</string>
+    <string name="onboarding_setup_shizuku_step_3">Tap Grant below and accept the request in Shizuku.</string>
+    <string name="onboarding_setup_root_step_1">Make sure this device is rooted and the su binary is available.</string>
+    <string name="onboarding_setup_root_step_2">Tap Check below and allow superuser access for DSU Sideloader in your root manager.</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_ready_title">You are all set</string>
+    <string name="onboarding_ready_subtitle">%1$s was verified. You can change the method at any time from the main screen.</string>
+    <string name="onboarding_ready_open">Open DSU Sideloader</string>
+    <string name="nav_main">Main</string>
 </resources>

@@ -47,6 +47,7 @@ import vegabobo.dsusideloader.preferences.AppPrefs
 import vegabobo.dsusideloader.preparation.InstallationStep
 import vegabobo.dsusideloader.preparation.Preparation
 import vegabobo.dsusideloader.service.PrivilegedProvider
+import vegabobo.dsusideloader.log.InstallationLogStore
 import vegabobo.dsusideloader.util.DevicePropUtils
 import vegabobo.dsusideloader.util.FileChecksum
 import vegabobo.dsusideloader.util.FilenameUtils
@@ -64,6 +65,7 @@ class HomeViewModel @Inject constructor(
     private val historyStore: InstallHistoryStore,
     private val accessController: AccessController,
     private val updateManager: UpdateManager,
+    private val logStore: InstallationLogStore,
     var session: Session,
 ) : BaseViewModel(dataStore) {
 
@@ -872,7 +874,10 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun onLogLineReceived() {
-        _uiState.update { it.copy(installationLogs = logger!!.logs) }
+        val logs = logger?.logs ?: return
+        _uiState.update { it.copy(installationLogs = logs) }
+        // Shared with the Log tab so both show the same lines.
+        logStore.update(logs)
     }
 
     private fun onStepUpdate(step: InstallationStep) =

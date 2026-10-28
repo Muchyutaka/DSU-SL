@@ -164,6 +164,13 @@ fun Settings(
             onClick = { settingsViewModel.togglePreference(AppPrefs.AMOLED_BLACK, !it) },
         )
 
+        Title(title = stringResource(id = R.string.history))
+        PreferenceItem(
+            title = stringResource(id = R.string.install_history_title),
+            description = stringResource(id = R.string.install_history_description),
+            onClick = { navigate(Destinations.History) },
+        )
+
         Title(title = stringResource(id = R.string.other))
         PreferenceItem(
             title = stringResource(id = R.string.operation_mode),

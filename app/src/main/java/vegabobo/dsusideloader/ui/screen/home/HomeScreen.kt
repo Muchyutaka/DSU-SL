@@ -60,6 +60,7 @@ fun Home(
 
     LaunchedEffect(Unit) {
         homeViewModel.setupUserPreferences()
+        homeViewModel.restoreConfigurationIfRequested()
         homeViewModel.session.operationMode.collectLatest {
             homeViewModel.initialChecks()
         }

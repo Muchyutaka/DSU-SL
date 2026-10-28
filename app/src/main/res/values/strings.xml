@@ -260,6 +260,31 @@
     <string name="amoled_title">AMOLED black</string>
     <string name="amoled_description">Use a pure black background when dark theme is active</string>
 
+    <!-- History settings and screen -->
+    <string name="history">History</string>
+    <string name="install_history_title">Install history</string>
+    <string name="install_history_description">Past installations, retry and saved presets</string>
+    <string name="history_entries_title">Recent installations</string>
+    <string name="history_empty">No installations recorded yet, history is kept only on this device.</string>
+    <string name="history_retry_note">Retry restores the configuration of that installation, select the image file again to continue.</string>
+    <string name="history_unknown_file">Unknown file</string>
+    <string name="history_result">Result: %1$s</string>
+    <string name="history_result_success">Success</string>
+    <string name="history_result_error">Failed</string>
+    <string name="history_result_canceled">Canceled</string>
+    <string name="history_userdata">Userdata: %1$s GB</string>
+    <string name="history_image_size">Image size: %1$s bytes</string>
+    <string name="history_image_size_auto">Image size: automatic</string>
+    <string name="history_error_summary">Error: %1$s</string>
+    <string name="history_retry">Retry</string>
+    <string name="history_save_preset">Save as preset</string>
+    <string name="history_clear">Clear history</string>
+    <string name="history_presets_title">Presets</string>
+    <string name="history_presets_empty">No saved presets yet, save one from a past installation.</string>
+    <string name="history_preset_title">Saved configuration</string>
+    <string name="history_preset_apply">Apply</string>
+    <string name="history_preset_delete">Delete</string>
+
     <string name="other">Other</string>
 
     <string name="operation_mode">Operation mode</string>

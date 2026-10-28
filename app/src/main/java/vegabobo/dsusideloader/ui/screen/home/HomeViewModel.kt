@@ -34,6 +34,9 @@ import vegabobo.dsusideloader.diagnostics.PatchLevelUtils
 import vegabobo.dsusideloader.installer.adb.AdbInstallationHandler
 import vegabobo.dsusideloader.installer.privileged.DsuInstallationHandler
 import vegabobo.dsusideloader.installer.privileged.LogcatDiagnostic
+import vegabobo.dsusideloader.history.InstallHistoryEntry
+import vegabobo.dsusideloader.history.InstallHistoryStore
+import vegabobo.dsusideloader.history.InstallResult
 import vegabobo.dsusideloader.installer.root.DSUInstaller
 import vegabobo.dsusideloader.model.DSUInstallationSource
 import vegabobo.dsusideloader.model.Session
@@ -53,6 +56,7 @@ class HomeViewModel @Inject constructor(
     val application: Application,
     override val dataStore: DataStore<Preferences>,
     private val storageManager: StorageManager,
+    private val historyStore: InstallHistoryStore,
     var session: Session,
 ) : BaseViewModel(dataStore) {
 
@@ -267,6 +271,7 @@ class HomeViewModel @Inject constructor(
 
     private fun startInstallation() {
         Log.d(tag, "startInstallation(), session: \n$session")
+        historyRecorded = false
         updateInstallationCard { it.copy(installationStep = InstallationStep.PROCESSING) }
 
         if (session.getOperationMode() == OperationMode.ADB) {
@@ -347,6 +352,60 @@ class HomeViewModel @Inject constructor(
     }
 
     //
+    // Install history
+    //
+
+    private fun recordHistory(result: InstallResult, errorSummary: String = "") {
+        if (historyRecorded) {
+            return
+        }
+        historyRecorded = true
+        val selection = session.userSelection
+        val entry = InstallHistoryEntry(
+            timestamp = System.currentTimeMillis(),
+            fileName = selection.selectedFileName,
+            userdataGb = selection.getUserDataSizeAsGB().toLongOrNull() ?: 0L,
+            imageSizeBytes = session.dsuInstallation.fileSize,
+            result = result,
+            errorSummary = errorSummary,
+        )
+        viewModelScope.launch {
+            try {
+                historyStore.appendHistory(entry)
+            } catch (e: Exception) {
+                Log.w(tag, "Unable to store install history", e)
+            }
+        }
+    }
+
+    /**
+     * Applies a configuration chosen in the history screen (userdata/image size).
+     * The image itself still has to be selected again, because content uris are
+     * not kept in the history.
+     */
+    fun restoreConfigurationIfRequested() {
+        if (!session.pendingConfigurationRestore) {
+            return
+        }
+        session.pendingConfigurationRestore = false
+        val selection = session.userSelection
+        Log.d(tag, "Restoring configuration from history: $selection")
+        updateUserdataCard {
+            it.copy(isSelected = true, text = "${selection.getUserDataSizeAsGB()}GB")
+        }
+        updateImageSizeCard {
+            it.copy(
+                isSelected = selection.isCustomImageSize(),
+                text = if (selection.isCustomImageSize()) {
+                    "${selection.userSelectedImageSize}b"
+                } else {
+                    ""
+                },
+            )
+        }
+    }
+
+    //
     // Diagnostics export (explicit sharing, never automatic)
     //
 
@@ -401,6 +460,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onClickCancelInstallationButton() {
+        recordHistory(InstallResult.CANCELED)
         resetInstallationCard()
         if (session.getOperationMode() != OperationMode.ADB &&
             logger != null && logger!!.isLogging.get()
@@ -750,10 +810,12 @@ class HomeViewModel @Inject constructor(
 
     private fun onRootInstallationSuccess() {
         updateInstallationCard { it.copy(installationStep = InstallationStep.INSTALL_SUCCESS_REBOOT_DYN_OS) }
+        recordHistory(InstallResult.SUCCESS)
     }
 
     private fun onInstallationSuccess() {
         updateInstallationCard { it.copy(installationStep = InstallationStep.INSTALL_SUCCESS) }
+        recordHistory(InstallResult.SUCCESS)
     }
 
     private fun onLogLineReceived() {
@@ -768,6 +830,11 @@ class HomeViewModel @Inject constructor(
 
     private fun onInstallationError(error: InstallationStep, errorContent: String) {
         val diagnosticType = DiagnosticMapper.fromStep(error, errorContent)
+        if (error == InstallationStep.ERROR_CANCELED) {
+            recordHistory(InstallResult.CANCELED, errorContent)
+        } else {
+            recordHistory(InstallResult.ERROR, errorContent)
+        }
         updateInstallationCard {
             if (error == InstallationStep.ERROR_SELINUX && !session.isRoot()) {
                 it.copy(
@@ -800,6 +867,7 @@ class HomeViewModel @Inject constructor(
             InstallationStep.ERROR
         }
         val rawError = throwable.message ?: throwable.toString()
+        recordHistory(InstallResult.ERROR, rawError)
         updateInstallationCard {
             it.copy(
                 installationStep = step,

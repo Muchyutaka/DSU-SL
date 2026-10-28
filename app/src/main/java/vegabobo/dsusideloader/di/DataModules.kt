@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import vegabobo.dsusideloader.core.StorageManager
+import vegabobo.dsusideloader.history.InstallHistoryStore
 import vegabobo.dsusideloader.model.Session
 import vegabobo.dsusideloader.preferences.AppPrefs
 
@@ -43,6 +44,14 @@ object DataModules {
         preferences: DataStore<Preferences>,
     ): StorageManager {
         return StorageManager(appContext, preferences)
+    }
+
+    @Singleton
+    @Provides
+    fun provideInstallHistoryStore(
+        preferences: DataStore<Preferences>,
+    ): InstallHistoryStore {
+        return InstallHistoryStore(preferences)
     }
 
     @Singleton

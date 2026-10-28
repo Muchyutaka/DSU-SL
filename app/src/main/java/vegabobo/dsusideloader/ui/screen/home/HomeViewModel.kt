@@ -412,13 +412,23 @@ class HomeViewModel @Inject constructor(
     fun shareDiagnosticReport() {
         val card = uiState.value.installationCard
         val reporter = DiagnosticReporter(application)
-        val report = reporter.buildReport(
-            operationMode = OperationModeUtils.getOperationModeAsString(session.getOperationMode()),
-            installationDetails = buildInstallationDetails(),
-            errorInfo = buildErrorSummary(card),
-            appLogs = uiState.value.installationLogs,
-        )
-        reporter.share(report)
+        val operationMode = OperationModeUtils.getOperationModeAsString(session.getOperationMode())
+        val installationDetails = buildInstallationDetails()
+        val errorInfo = buildErrorSummary(card)
+        val appLogs = uiState.value.installationLogs
+
+        // Reading logcat and writing the file must not run on the main thread.
+        viewModelScope.launch {
+            val report = withContext(Dispatchers.IO) {
+                reporter.buildReport(
+                    operationMode = operationMode,
+                    installationDetails = installationDetails,
+                    errorInfo = errorInfo,
+                    appLogs = appLogs,
+                )
+            }
+            reporter.share(report)
+        }
     }
 
     private fun buildInstallationDetails(): String {

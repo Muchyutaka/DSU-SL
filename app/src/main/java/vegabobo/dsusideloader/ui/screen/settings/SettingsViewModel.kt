@@ -8,11 +8,13 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.diagnostics.DiagnosticReporter
 import vegabobo.dsusideloader.model.Session
@@ -93,10 +95,13 @@ class SettingsViewModel @Inject constructor(
      */
     fun shareDiagnosticReport() {
         val reporter = DiagnosticReporter(application)
-        val report = reporter.buildReport(
-            operationMode = checkOperationMode(),
-        )
-        reporter.share(report)
+        val operationMode = checkOperationMode()
+        viewModelScope.launch {
+            val report = withContext(Dispatchers.IO) {
+                reporter.buildReport(operationMode = operationMode)
+            }
+            reporter.share(report)
+        }
     }
 
     fun isAndroidQ(): Boolean = Build.VERSION.SDK_INT == 29

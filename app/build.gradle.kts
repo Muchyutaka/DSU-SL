@@ -1,10 +1,11 @@
 import java.util.Properties
+import org.gradle.api.Project
 
-fun getReleaseSigningConfig(): File {
-    // Resolve against the root project so the file is found no matter which
-    // directory Gradle was invoked from (locally or on CI). Fall back to the
-    // historical working-directory relative path.
-    val rootProjectFile = rootProject.layout.projectDirectory.file(".sign/dsu_sideloader.prop").asFile
+fun getReleaseSigningConfig(rootProject: Project): File {
+    // Resolve against the root project directory so the file is found no matter
+    // which directory Gradle was invoked from (locally or on CI). Fall back to
+    // the historical working-directory relative path.
+    val rootProjectFile = File(rootProject.projectDir, ".sign/dsu_sideloader.prop")
     return if (rootProjectFile.exists()) rootProjectFile else File(".sign/dsu_sideloader.prop")
 }
 
@@ -40,7 +41,7 @@ android {
     }
 
     signingConfigs {
-        val releaseSigningConfig = getReleaseSigningConfig()
+        val releaseSigningConfig = getReleaseSigningConfig(rootProject)
         if (releaseSigningConfig.exists()) {
             create("release") {
                 /**
@@ -65,7 +66,7 @@ android {
 
     buildTypes {
         getByName("release") {
-            if (getReleaseSigningConfig().exists()) {
+            if (getReleaseSigningConfig(rootProject).exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true

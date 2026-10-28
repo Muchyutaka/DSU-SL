@@ -21,6 +21,7 @@ import vegabobo.dsusideloader.ui.components.ApplicationScreen
 import vegabobo.dsusideloader.ui.components.DialogLikeBottomSheet
 import vegabobo.dsusideloader.ui.components.PreferenceItem
 import vegabobo.dsusideloader.ui.components.SettingsSection
+import vegabobo.dsusideloader.ui.components.UpdateCard
 import vegabobo.dsusideloader.ui.components.TopBar
 import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.components.access.accessMethodTitle
@@ -38,6 +39,7 @@ fun Settings(
     val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val accessMethod by settingsViewModel.accessMethod.collectAsStateWithLifecycle()
     val accessResults by settingsViewModel.accessResults.collectAsStateWithLifecycle()
+    val updateState by settingsViewModel.updateState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         settingsViewModel.checkDevOpt()
@@ -227,9 +229,22 @@ fun Settings(
         }
 
         SettingsSection(title = stringResource(id = R.string.settings_section_about)) {
+            UpdateCard(
+                state = updateState,
+                currentVersion = settingsViewModel.currentVersion,
+                onCheck = { settingsViewModel.checkForUpdates() },
+                onDownload = { settingsViewModel.downloadUpdate() },
+                onInstall = { settingsViewModel.installUpdate() },
+                onOpenReleasePage = { settingsViewModel.openUpdateReleasePage() },
+                onOpenInstallSettings = { settingsViewModel.openInstallPermissionSettings() },
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
+            )
             PreferenceItem(
                 title = stringResource(id = R.string.about),
-                description = stringResource(id = R.string.settings_version, BuildConfig.VERSION_NAME),
+                description = stringResource(
+                    id = R.string.settings_version,
+                    BuildConfig.VERSION_NAME,
+                ),
                 onClick = { navigate(Destinations.About) },
             )
             PreferenceItem(

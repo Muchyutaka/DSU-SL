@@ -176,6 +176,18 @@ Every card shows a status badge (Available / Not installed / Not running / Not a
 
 Installs that already run as a system app (the Magisk module) skip the onboarding screen: the privileged mode is detected (`INSTALL_DYNAMIC_SYSTEM`) and there is nothing to choose.
 
+## App updates
+
+The app checks its own releases (`https://github.com/Muchyutaka/DSU-SL/releases`) and can fetch the newest build without leaving the app.
+
+- **Detection:** one anonymous request to the GitHub API (`/releases/latest`), at most once every 6 hours, plus a manual "Check for updates" in Settings and About. Drafts and pre-releases are ignored.
+- **Where it shows:** a banner at the top of the home screen when a newer version exists (dismissible per version), a card in *Settings → About*, and a card on the About screen.
+- **Fetching:** "Download" streams the `-release.apk` asset into app private storage with a progress bar. When the release publishes `SHA256SUMS` (this repository's CI always does), the downloaded file is verified against the published SHA-256 and **deleted on mismatch**.
+- **Installing:** Android's package installer is opened for the verified file; the app asks for the "install unknown apps" permission when it is missing.
+- **Privacy:** nothing is sent anywhere except the version request to GitHub, and nothing is downloaded until you tap Download.
+
+The old updater (a static `updater.json` and an author-signature gate) was removed: it only ever worked for builds signed with the upstream author's key, so forks never saw an update.
+
 ## Operation modes
 
 DSU Sideloader support multiple operation modes, they will define how our app will work, also, the operation mode is obtained automatically, and by now, is impossible to change it manually, the picked operation mode will be the best available (the priority is written below, in which, the most feature supported, is the highest number, and the most basic one is the lowest).

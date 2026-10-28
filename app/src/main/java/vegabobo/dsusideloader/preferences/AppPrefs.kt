@@ -2,15 +2,13 @@ package vegabobo.dsusideloader.preferences
 
 object AppPrefs {
     /**
-     * Update feature only works if AUTHOR_SIGN_DIGEST is set
-     * with same SHA1 digest from signed apk OR is a DEBUG build
-     * if AUTHOR_SIGN_DIGEST doesn't match, also no problem
-     * app will work as expected, just without update feature.
-     * check AboutViewModel init
+     * Releases endpoint used by the update checker. The app reads
+     * `releases/latest` from this fork, see ReleaseClient.
      */
     const val UPDATE_CHECK_URL =
-        "https://raw.githubusercontent.com/VegaBobo/DSU-Sideloader/master/other/updater.json"
-    const val AUTHOR_SIGN_DIGEST = "0da046eb480972124e2fe2251ebc5b19ea9e13d9"
+        "https://api.github.com/repos/Muchyutaka/DSU-SL/releases/latest"
+    const val UPDATE_LAST_CHECK = "update_last_check"
+    const val UPDATE_DISMISSED_TAG = "update_dismissed_tag"
     const val USER_PREFERENCES = "user_preferences"
     const val BOOTLOADER_UNLOCKED_WARNING = "bootloader_unlocked_warning"
     const val SAF_PATH = "writable_path"

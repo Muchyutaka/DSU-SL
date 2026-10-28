@@ -33,6 +33,7 @@ import kotlin.system.exitProcess
 import kotlinx.coroutines.flow.collectLatest
 import vegabobo.dsusideloader.R
 import vegabobo.dsusideloader.access.AccessCheckResult
+import vegabobo.dsusideloader.update.UpdateState
 import vegabobo.dsusideloader.ui.cards.DsuInfoCard
 import vegabobo.dsusideloader.ui.cards.ImageSizeCard
 import vegabobo.dsusideloader.ui.cards.UserdataCard
@@ -45,6 +46,7 @@ import vegabobo.dsusideloader.ui.cards.warnings.UnlockedBootloaderCard
 import vegabobo.dsusideloader.ui.cards.warnings.UnsupportedCard
 import vegabobo.dsusideloader.ui.components.ApplicationScreen
 import vegabobo.dsusideloader.ui.components.TopBar
+import vegabobo.dsusideloader.ui.components.UpdateCard
 import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.sdialogs.CancelSheet
 import vegabobo.dsusideloader.ui.sdialogs.ConfirmInstallationSheet
@@ -71,6 +73,8 @@ fun Home(
     val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
     val accessMethod by homeViewModel.accessMethod.collectAsStateWithLifecycle()
     val accessResults by homeViewModel.accessResults.collectAsStateWithLifecycle()
+    val updateState by homeViewModel.updateState.collectAsStateWithLifecycle()
+    val updateDismissedTag by homeViewModel.updateDismissedTag.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
 
     // Same picker as the installation card, so the hero primary action and the
@@ -99,6 +103,11 @@ fun Home(
         }
     }
 
+    // Update detection: the manager only hits the network once every 6 hours.
+    LaunchedEffect(Unit) {
+        homeViewModel.checkForUpdates()
+    }
+
     ApplicationScreen(
         modifier = Modifier.padding(start = 10.dp, end = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -111,6 +120,33 @@ fun Home(
             )
         },
         content = {
+            // Update banner: only for an available/downloading/ready release the
+            // user did not dismiss, or a failure worth retrying.
+            val visibleUpdateTag = updateState.releaseOrNull()?.tag
+            AnimatedVisibility(
+                visible = updateState is UpdateState.Failed ||
+                    (visibleUpdateTag != null && visibleUpdateTag != updateDismissedTag),
+                enter = fadeIn(tween(motionDuration(220))) +
+                    expandVertically(tween(motionDuration(240))),
+                exit = fadeOut(tween(motionDuration(120))) +
+                    shrinkVertically(tween(motionDuration(200))),
+            ) {
+                UpdateCard(
+                    state = updateState,
+                    currentVersion = homeViewModel.updateCurrentVersion,
+                    compact = true,
+                    onCheck = { homeViewModel.checkForUpdates(force = true) },
+                    onDownload = { homeViewModel.downloadUpdate() },
+                    onInstall = { homeViewModel.installUpdate() },
+                    onOpenReleasePage = { homeViewModel.openUpdateReleasePage() },
+                    onOpenInstallSettings = { homeViewModel.openInstallPermissionSettings() },
+                    onDismiss = {
+                        homeViewModel.dismissUpdate()
+                        homeViewModel.clearUpdateError()
+                    },
+                )
+            }
+
             AccessHeroCard(
                 method = accessMethod,
                 result = accessResults[accessMethod] ?: AccessCheckResult.unknown(),

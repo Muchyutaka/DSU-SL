@@ -23,6 +23,8 @@ import vegabobo.dsusideloader.diagnostics.DiagnosticReporter
 import vegabobo.dsusideloader.model.Session
 import vegabobo.dsusideloader.preferences.AppPrefs
 import vegabobo.dsusideloader.ui.theme.ThemeMode
+import vegabobo.dsusideloader.update.UpdateManager
+import vegabobo.dsusideloader.update.UpdateState
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
 
@@ -31,6 +33,7 @@ class SettingsViewModel @Inject constructor(
     override val dataStore: DataStore<Preferences>,
     private val session: Session,
     private val accessController: AccessController,
+    private val updateManager: UpdateManager,
     val application: Application,
 ) : BaseViewModel(dataStore) {
 
@@ -45,6 +48,11 @@ class SettingsViewModel @Inject constructor(
     /** Live access check results, shared with the onboarding and home screens. */
     val accessResults: StateFlow<Map<AccessMethod, AccessCheckResult>> =
         accessController.checkResults
+
+    /** App update state, shared with the home and About screens. */
+    val updateState: StateFlow<UpdateState> = updateManager.state
+
+    val currentVersion: String = updateManager.currentVersion
 
     fun reloadPreferences() {
         uiState.value.preferences.forEach { entry ->
@@ -117,6 +125,18 @@ class SettingsViewModel @Inject constructor(
 
     /** Re-runs the real access check for the confirmed method. */
     fun recheckAccess() = accessController.recheck()
+
+    fun checkForUpdates() = updateManager.check(force = true)
+
+    fun downloadUpdate() {
+        updateState.value.releaseOrNull()?.let { updateManager.download(it) }
+    }
+
+    fun installUpdate() = updateManager.install()
+
+    fun openUpdateReleasePage() = updateManager.openReleasePage()
+
+    fun openInstallPermissionSettings() = updateManager.openInstallPermissionSettings()
 
     /**
      * Deletes the diagnostic reports stored by [DiagnosticReporter]. Nothing

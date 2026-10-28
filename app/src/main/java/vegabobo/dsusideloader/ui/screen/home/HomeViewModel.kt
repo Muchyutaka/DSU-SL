@@ -52,6 +52,8 @@ import vegabobo.dsusideloader.util.FileChecksum
 import vegabobo.dsusideloader.util.FilenameUtils
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
+import vegabobo.dsusideloader.update.UpdateManager
+import vegabobo.dsusideloader.update.UpdateState
 import vegabobo.dsusideloader.util.StorageUtils
 
 @HiltViewModel
@@ -61,6 +63,7 @@ class HomeViewModel @Inject constructor(
     private val storageManager: StorageManager,
     private val historyStore: InstallHistoryStore,
     private val accessController: AccessController,
+    private val updateManager: UpdateManager,
     var session: Session,
 ) : BaseViewModel(dataStore) {
 
@@ -75,6 +78,13 @@ class HomeViewModel @Inject constructor(
     /** Live check results, shared with the onboarding and settings screens. */
     val accessResults: StateFlow<Map<AccessMethod, AccessCheckResult>> =
         accessController.checkResults
+
+    /** App update detection, shared with the Settings and About screens. */
+    val updateState: StateFlow<UpdateState> = updateManager.state
+
+    val updateDismissedTag: StateFlow<String> = updateManager.dismissedTag
+
+    val updateCurrentVersion: String = updateManager.currentVersion
 
     var checkDynamicPartitions = true
     var checkUnavaiableStorage = true
@@ -116,6 +126,25 @@ class HomeViewModel @Inject constructor(
 
     /** Re-runs the real access check for the confirmed method. */
     fun recheckAccess() = accessController.recheck()
+
+    /** Checks the GitHub releases, throttled by the manager unless forced. */
+    fun checkForUpdates(force: Boolean = false) = updateManager.check(force)
+
+    fun downloadUpdate() {
+        updateState.value.releaseOrNull()?.let { updateManager.download(it) }
+    }
+
+    fun installUpdate() = updateManager.install()
+
+    fun openUpdateReleasePage() = updateManager.openReleasePage()
+
+    fun openInstallPermissionSettings() = updateManager.openInstallPermissionSettings()
+
+    fun dismissUpdate() {
+        updateState.value.releaseOrNull()?.let { updateManager.dismiss(it.tag) }
+    }
+
+    fun clearUpdateError() = updateManager.clearError()
 
     fun resetInstallationCard() {
         checksumJob?.cancel()

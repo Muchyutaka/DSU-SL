@@ -17,6 +17,7 @@ import vegabobo.dsusideloader.ui.components.PreferenceItem
 import vegabobo.dsusideloader.ui.components.Title
 import vegabobo.dsusideloader.ui.components.TopBar
 import vegabobo.dsusideloader.ui.screen.Destinations
+import vegabobo.dsusideloader.ui.theme.ThemeMode
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.collectAsStateWithLifecycle
 
@@ -100,6 +101,37 @@ fun Settings(
                 )
             }
         }
+
+        Title(title = stringResource(id = R.string.appearance))
+        PreferenceItem(
+            title = stringResource(id = R.string.theme_title),
+            description = when (uiState.themeMode) {
+                ThemeMode.SYSTEM -> stringResource(id = R.string.theme_mode_system)
+                ThemeMode.LIGHT -> stringResource(id = R.string.theme_mode_light)
+                ThemeMode.DARK -> stringResource(id = R.string.theme_mode_dark)
+            },
+            onClick = { settingsViewModel.cycleThemeMode() },
+        )
+        PreferenceItem(
+            title = stringResource(id = R.string.dynamic_color_title),
+            description =
+            if (settingsViewModel.isDynamicColorSupported()) {
+                stringResource(id = R.string.dynamic_color_description)
+            } else {
+                stringResource(id = R.string.requires_android_12)
+            },
+            showToggle = true,
+            isEnabled = settingsViewModel.isDynamicColorSupported(),
+            isChecked = uiState.preferences[AppPrefs.DYNAMIC_COLOR]!!,
+            onClick = { settingsViewModel.togglePreference(AppPrefs.DYNAMIC_COLOR, !it) },
+        )
+        PreferenceItem(
+            title = stringResource(id = R.string.amoled_title),
+            description = stringResource(id = R.string.amoled_description),
+            showToggle = true,
+            isChecked = uiState.preferences[AppPrefs.AMOLED_BLACK]!!,
+            onClick = { settingsViewModel.togglePreference(AppPrefs.AMOLED_BLACK, !it) },
+        )
 
         Title(title = stringResource(id = R.string.other))
         PreferenceItem(

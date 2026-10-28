@@ -163,6 +163,18 @@
 
     <string name="developer_options">Developer options</string>
 
+    <!-- Appearance settings -->
+    <string name="appearance">Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_mode_system">Follow system</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="dynamic_color_title">Dynamic color</string>
+    <string name="dynamic_color_description">Use wallpaper based colors</string>
+    <string name="requires_android_12">Requires Android 12 or higher</string>
+    <string name="amoled_title">AMOLED black</string>
+    <string name="amoled_description">Use a pure black background when dark theme is active</string>
+
     <string name="other">Other</string>
 
     <string name="operation_mode">Operation mode</string>

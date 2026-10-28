@@ -20,4 +20,18 @@ object AppPrefs {
     const val UMOUNT_SD = "umount_sd"
     const val DISABLE_STORAGE_CHECK = "disable_storage_check"
     const val FULL_LOGCAT_LOGGING = "full_logcat_logging"
+
+    // Appearance
+    const val THEME_MODE = "theme_mode"
+    const val DYNAMIC_COLOR = "dynamic_color"
+    const val AMOLED_BLACK = "amoled_black"
+
+    // Installation safety
+    const val VERIFY_CHECKSUM = "verify_checksum"
+    const val STRICT_CHECKSUM = "strict_checksum"
+    const val CHECK_PATCH_LEVEL = "check_patch_level"
+
+    // History and presets (serialized as JSON strings)
+    const val INSTALL_HISTORY = "install_history"
+    const val INSTALL_PRESETS = "install_presets"
 }

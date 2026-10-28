@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.model.Session
 import vegabobo.dsusideloader.preferences.AppPrefs
+import vegabobo.dsusideloader.ui.theme.ThemeMode
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
 
@@ -34,9 +35,16 @@ class SettingsViewModel @Inject constructor(
     fun reloadPreferences() {
         uiState.value.preferences.forEach { entry ->
             viewModelScope.launch {
-                val isEnabled = readBoolPref(entry.key)
+                // The current value doubles as the default of the preference,
+                // so never written preferences keep their initial value.
+                val isEnabled = readBoolPref(entry.key, entry.value)
                 togglePreference(entry.key, isEnabled)
             }
+        }
+
+        viewModelScope.launch {
+            val themeMode = ThemeMode.fromPreferenceValue(readStringPref(AppPrefs.THEME_MODE))
+            _uiState.update { it.copy(themeMode = themeMode) }
         }
 
         if (session.isRoot()) {
@@ -62,7 +70,25 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Cycles between "follow system", "light" and "dark" themes.
+     */
+    fun cycleThemeMode() {
+        val newThemeMode = when (uiState.value.themeMode) {
+            ThemeMode.SYSTEM -> ThemeMode.LIGHT
+            ThemeMode.LIGHT -> ThemeMode.DARK
+            ThemeMode.DARK -> ThemeMode.SYSTEM
+        }
+        viewModelScope.launch {
+            updateStringPref(AppPrefs.THEME_MODE, newThemeMode.toPreferenceValue()) {
+                _uiState.update { it.copy(themeMode = newThemeMode) }
+            }
+        }
+    }
+
     fun isAndroidQ(): Boolean = Build.VERSION.SDK_INT == 29
+
+    fun isDynamicColorSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     fun updateSheetDisplay(sheet: DialogSheetState) {
         _uiState.update { it.copy(dialogSheetDisplay = sheet) }

@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
@@ -22,15 +24,19 @@ import vegabobo.dsusideloader.service.PrivilegedRootService
 import vegabobo.dsusideloader.service.PrivilegedService
 import vegabobo.dsusideloader.service.PrivilegedSystemService
 import vegabobo.dsusideloader.ui.screen.Navigation
+import vegabobo.dsusideloader.ui.theme.AppearanceViewModel
 import vegabobo.dsusideloader.ui.theme.DSUHelperTheme
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
+import vegabobo.dsusideloader.util.collectAsStateWithLifecycle
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListener {
 
     @Inject
     lateinit var session: Session
+
+    private val appearanceViewModel: AppearanceViewModel by viewModels()
 
     private val tag = this.javaClass.simpleName
 
@@ -134,7 +140,12 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
-            DSUHelperTheme {
+            val appearanceState by appearanceViewModel.uiState.collectAsStateWithLifecycle()
+            DSUHelperTheme(
+                themeMode = appearanceState.themeMode,
+                dynamicColor = appearanceState.dynamicColor,
+                amoledDark = appearanceState.amoledDark,
+            ) {
                 Navigation()
             }
         }

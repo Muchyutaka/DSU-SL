@@ -72,7 +72,7 @@ object AccessChecks {
         // is delivered on the main thread by libsu.
         val shell = try {
             withContext(Dispatchers.Main) {
-                suspendCancellableCoroutine { continuation ->
+                suspendCancellableCoroutine<Shell> { continuation ->
                     Shell.getShell { shell -> continuation.resume(shell) }
                 }
             }

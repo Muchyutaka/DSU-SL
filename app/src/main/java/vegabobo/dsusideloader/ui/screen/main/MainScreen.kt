@@ -159,13 +159,7 @@ fun MainScreen(
             fontSize = 26.sp,
             letterSpacing = (-1).sp,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(top = 18.dp, bottom = 4.dp),
-        )
-        Text(
-            text = stringResource(id = R.string.main_header_subtitle),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 16.dp),
+            modifier = Modifier.padding(top = 18.dp, bottom = 20.dp),
         )
 
         // Update banner (only when a newer release exists).

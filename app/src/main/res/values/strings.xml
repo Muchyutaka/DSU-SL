@@ -478,7 +478,6 @@
     <string name="update_error_checksum">The downloaded APK does not match the published SHA-256, it was deleted. Try again.</string>
     <string name="update_error_install">Android does not allow this app to install packages yet. Allow it in the settings, then install again.</string>
     <!-- Main screen -->
-    <string name="main_header_subtitle">Sideload a GSI without unlocking your bootloader</string>
     <string name="main_status_label">Access method</string>
     <string name="main_status_verified">Verified</string>
     <string name="main_status_how_to_fix">This method needs attention before installing.</string>

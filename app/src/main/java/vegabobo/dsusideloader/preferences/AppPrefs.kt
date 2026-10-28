@@ -2,15 +2,13 @@ package vegabobo.dsusideloader.preferences
 
 object AppPrefs {
     /**
-     * Update feature only works if AUTHOR_SIGN_DIGEST is set
-     * with same SHA1 digest from signed apk OR is a DEBUG build
-     * if AUTHOR_SIGN_DIGEST doesn't match, also no problem
-     * app will work as expected, just without update feature.
-     * check AboutViewModel init
+     * Releases endpoint used by the update checker. The app reads
+     * `releases/latest` from this fork, see ReleaseClient.
      */
     const val UPDATE_CHECK_URL =
-        "https://raw.githubusercontent.com/VegaBobo/DSU-Sideloader/master/other/updater.json"
-    const val AUTHOR_SIGN_DIGEST = "0da046eb480972124e2fe2251ebc5b19ea9e13d9"
+        "https://api.github.com/repos/Muchyutaka/DSU-SL/releases/latest"
+    const val UPDATE_LAST_CHECK = "update_last_check"
+    const val UPDATE_DISMISSED_TAG = "update_dismissed_tag"
     const val USER_PREFERENCES = "user_preferences"
     const val BOOTLOADER_UNLOCKED_WARNING = "bootloader_unlocked_warning"
     const val SAF_PATH = "writable_path"
@@ -20,4 +18,30 @@ object AppPrefs {
     const val UMOUNT_SD = "umount_sd"
     const val DISABLE_STORAGE_CHECK = "disable_storage_check"
     const val FULL_LOGCAT_LOGGING = "full_logcat_logging"
+
+    // Access method chosen in the onboarding screen
+    const val ACCESS_METHOD = "access_method"
+    const val ACCESS_METHOD_CONFIRMED = "access_method_confirmed"
+
+    /**
+     * True once the user finished the one-time onboarding flow and reached the
+     * main screen. While it is set, the app opens the main screen directly
+     * instead of asking for the access method again; "Change method" in the
+     * main screen still starts the flow again.
+     */
+    const val HAS_COMPLETED_SETUP = "has_completed_setup"
+
+    // Appearance
+    const val THEME_MODE = "theme_mode"
+    const val DYNAMIC_COLOR = "dynamic_color"
+    const val AMOLED_BLACK = "amoled_black"
+
+    // Installation safety
+    const val VERIFY_CHECKSUM = "verify_checksum"
+    const val STRICT_CHECKSUM = "strict_checksum"
+    const val CHECK_PATCH_LEVEL = "check_patch_level"
+
+    // History and presets (serialized as JSON strings)
+    const val INSTALL_HISTORY = "install_history"
+    const val INSTALL_PRESETS = "install_presets"
 }

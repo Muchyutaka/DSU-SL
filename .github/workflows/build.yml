@@ -1,0 +1,292 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ "master", "main" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref (e.g. multiple pushes to a PR).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege by default. The release job opts into "contents: write".
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Assemble debug APK
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace assembleDebug 2>&1 | tee gradle-debug.log
+
+      # Compile errors are surfaced as annotations so they are visible from the
+      # API without downloading the (often very large) job logs.
+      - name: Surface build errors
+        if: failure()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+
+          path = "gradle-debug.log"
+          lines = []
+          if os.path.exists(path):
+              lines = open(path, errors="replace").read().splitlines()
+          errors = [
+              line for line in lines
+              if line.startswith("e: ") or "error:" in line or "FAILED" in line
+          ]
+          picked = errors[-40:] if errors else lines[-40:]
+          for line in picked:
+              escaped = line.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error::{escaped}")
+          PY
+
+      - name: Run unit tests
+        run: ./gradlew --no-daemon --stacktrace testDebugUnitTest
+
+      # A green test task is not enough: Gradle happily succeeds when the test
+      # source set is empty or when no test matched. Fail loudly instead and
+      # surface the totals on the run summary.
+      - name: Verify unit tests actually ran
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          total = 0
+          failed = 0
+          for path in glob.glob("app/build/test-results/testDebugUnitTest/TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              total += int(root.get("tests") or 0)
+              failed += int(root.get("failures") or 0) + int(root.get("errors") or 0)
+
+          print(f"executed {total} unit test(s), {failed} failure(s)")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"Unit tests: {total} executed, {failed} failed\n")
+
+          if total == 0:
+              raise SystemExit("no unit tests were executed")
+          if failed:
+              raise SystemExit("unit tests failed")
+          PY
+
+      # Tagged releases are built with R8 (minify + resource shrinking) enabled,
+      # so make sure the release variant keeps assembling without signing
+      # secrets. This catches shrinking/ProGuard problems before the first tag.
+      - name: Assemble release APK (compile check)
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: dsu-sideloader-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload unit test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-reports
+          path: app/build/reports/tests/testDebugUnitTest
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release:
+    name: Assemble release APK (tags)
+    needs: build
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    env:
+      # Optional signing secrets. When they are absent the job still builds an
+      # unsigned release APK, which is attached to the GitHub Release.
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      # The app already reads ".sign/dsu_sideloader.prop" for release signing
+      # (see app/build.gradle.kts). We materialize that file from secrets here,
+      # so no signing information is ever committed to the repository.
+      - name: Configure release signing from secrets
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        run: |
+          set -euo pipefail
+          mkdir -p .sign
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > .sign/ci-keystore.jks
+          {
+            echo "keystore=$PWD/.sign/ci-keystore.jks"
+            echo "keystore_pw=$KEYSTORE_PASSWORD"
+            echo "alias=$KEY_ALIAS"
+            echo "alias_pw=$KEY_PASSWORD"
+          } > .sign/dsu_sideloader.prop
+
+      - name: Assemble release APK
+        run: |
+          set -o pipefail
+          ./gradlew --no-daemon --stacktrace assembleRelease 2>&1 | tee gradle-release.log
+
+      - name: Surface build errors
+        if: failure()
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+
+          path = "gradle-release.log"
+          lines = []
+          if os.path.exists(path):
+              lines = open(path, errors="replace").read().splitlines()
+          errors = [
+              line for line in lines
+              if line.startswith("e: ") or "error:" in line or "FAILED" in line
+          ]
+          picked = errors[-40:] if errors else lines[-40:]
+          for line in picked:
+              escaped = line.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+              print(f"::error::{escaped}")
+          PY
+
+      # The debug APK is built once by the "build" job; reuse that exact build
+      # instead of compiling it again so both assets come from the same commit.
+      - name: Download debug APK
+        uses: actions/download-artifact@v8
+        with:
+          name: dsu-sideloader-debug-apk
+          path: artifacts
+
+      - name: Collect APKs
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          release_apk="$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)"
+          if [ -z "$release_apk" ]; then
+            echo "::error::no release APK was produced"
+            exit 1
+          fi
+          debug_apk="$(find artifacts -maxdepth 1 -name '*.apk' | head -n 1)"
+          if [ -z "$debug_apk" ]; then
+            echo "::error::the debug APK artifact did not contain an APK"
+            exit 1
+          fi
+          mkdir -p dist
+          # Keep a readable, tagged file name for every asset.
+          cp "$release_apk" "dist/dsu-sideloader-$version-release.apk"
+          cp "$debug_apk" "dist/dsu-sideloader-$version-debug.apk"
+          if [ -z "${KEYSTORE_BASE64:-}" ]; then
+            echo "::warning::No signing secrets configured: the release APK is signed with the debug key and cannot upgrade over a build signed with the real release key."
+          fi
+          if [ "${release_apk##*/}" = "app-release-unsigned.apk" ]; then
+            echo "::error::The release APK is unsigned and cannot be installed."
+            exit 1
+          fi
+          cd dist
+          sha256sum ./*.apk > SHA256SUMS
+          cat SHA256SUMS
+          ls -l
+
+      # An APK without a valid signature is rejected by Android at install time,
+      # so never publish one silently.
+      - name: Verify APK signatures
+        run: |
+          set -euo pipefail
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          apksigner=""
+          if [ -n "$sdk" ] && [ -d "$sdk" ]; then
+            apksigner="$(find "$sdk" -type f -name apksigner 2>/dev/null | sort | tail -n 1)"
+          fi
+          if [ -z "$apksigner" ]; then
+            echo "::notice::apksigner was not found in the Android SDK; skipping signature verification"
+            exit 0
+          fi
+          for apk in dist/*.apk; do
+            echo "--- $apk"
+            "$apksigner" verify --print-certs "$apk"
+          done
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v7
+        with:
+          name: dsu-sideloader-apks
+          path: |
+            dist/*.apk
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+          {
+            echo "Automated build for $tag."
+            echo
+            echo "| Asset | Description |"
+            echo "| --- | --- |"
+            echo "| \`dsu-sideloader-$version-release.apk\` | Optimized release build (smaller, R8 minified). |"
+            echo "| \`dsu-sideloader-$version-debug.apk\` | Debug build, useful for logs and troubleshooting. |"
+            echo "| \`SHA256SUMS\` | SHA-256 checksums of both APKs, verify with \`sha256sum -c SHA256SUMS\`. |"
+            echo
+            echo "### How to install"
+            echo
+            echo "1. Android 10 or newer is required."
+            echo "2. Allow installing unknown apps for the browser or file manager you download with."
+            echo "3. The app needs Shizuku or root to install the DSU; it walks you through the setup when it is missing."
+            if [ -z "${KEYSTORE_BASE64:-}" ]; then
+              echo
+              echo "> **Note:** this repository has no release signing key configured, so both APKs are signed with the debug key. Uninstall any build signed with a different key before installing."
+            fi
+          } > notes.md
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --title "$tag" --notes-file notes.md --verify-tag
+          fi
+          gh release upload "$tag" dist/*.apk dist/SHA256SUMS --clobber

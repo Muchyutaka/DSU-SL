@@ -18,13 +18,28 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.cancellation.CancellationException
 import vegabobo.dsusideloader.BuildConfig
+import vegabobo.dsusideloader.access.AccessCheckResult
+import vegabobo.dsusideloader.access.AccessController
+import vegabobo.dsusideloader.access.AccessMethod
 import vegabobo.dsusideloader.core.BaseViewModel
 import vegabobo.dsusideloader.core.StorageManager
+import vegabobo.dsusideloader.diagnostics.ChecksumUtils
+import vegabobo.dsusideloader.diagnostics.DiagnosticMapper
+import vegabobo.dsusideloader.diagnostics.DiagnosticReporter
+import vegabobo.dsusideloader.diagnostics.DiagnosticType
+import vegabobo.dsusideloader.diagnostics.PatchLevelComparison
+import vegabobo.dsusideloader.diagnostics.PatchLevelUtils
 import vegabobo.dsusideloader.installer.adb.AdbInstallationHandler
 import vegabobo.dsusideloader.installer.privileged.DsuInstallationHandler
 import vegabobo.dsusideloader.installer.privileged.LogcatDiagnostic
+import vegabobo.dsusideloader.history.InstallHistoryEntry
+import vegabobo.dsusideloader.history.InstallHistoryStore
+import vegabobo.dsusideloader.history.InstallResult
 import vegabobo.dsusideloader.installer.root.DSUInstaller
 import vegabobo.dsusideloader.model.DSUInstallationSource
 import vegabobo.dsusideloader.model.Session
@@ -32,10 +47,14 @@ import vegabobo.dsusideloader.preferences.AppPrefs
 import vegabobo.dsusideloader.preparation.InstallationStep
 import vegabobo.dsusideloader.preparation.Preparation
 import vegabobo.dsusideloader.service.PrivilegedProvider
+import vegabobo.dsusideloader.log.InstallationLogStore
 import vegabobo.dsusideloader.util.DevicePropUtils
+import vegabobo.dsusideloader.util.FileChecksum
 import vegabobo.dsusideloader.util.FilenameUtils
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
+import vegabobo.dsusideloader.update.UpdateManager
+import vegabobo.dsusideloader.update.UpdateState
 import vegabobo.dsusideloader.util.StorageUtils
 
 @HiltViewModel
@@ -43,6 +62,10 @@ class HomeViewModel @Inject constructor(
     val application: Application,
     override val dataStore: DataStore<Preferences>,
     private val storageManager: StorageManager,
+    private val historyStore: InstallHistoryStore,
+    private val accessController: AccessController,
+    private val updateManager: UpdateManager,
+    private val logStore: InstallationLogStore,
     var session: Session,
 ) : BaseViewModel(dataStore) {
 
@@ -51,6 +74,20 @@ class HomeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    /** Access method confirmed in the onboarding screen. */
+    val accessMethod: StateFlow<AccessMethod?> = accessController.selectedMethod
+
+    /** Live check results, shared with the onboarding and settings screens. */
+    val accessResults: StateFlow<Map<AccessMethod, AccessCheckResult>> =
+        accessController.checkResults
+
+    /** App update detection, shared with the Settings and About screens. */
+    val updateState: StateFlow<UpdateState> = updateManager.state
+
+    val updateDismissedTag: StateFlow<String> = updateManager.dismissedTag
+
+    val updateCurrentVersion: String = updateManager.currentVersion
+
     var checkDynamicPartitions = true
     var checkUnavaiableStorage = true
     var checkReadLogsPermission = true
@@ -58,6 +95,10 @@ class HomeViewModel @Inject constructor(
 
     var installationJob: Job = Job()
     var logger: LogcatDiagnostic? = null
+    private var checksumJob: Job? = null
+
+    /** Prevents recording the same installation twice in the history. */
+    private var historyRecorded = false
 
     private val allocPercentage = DevicePropUtils.getGsidBinaryAllowedPerc()
     val allocPercentageInt = String.format("%.0f", allocPercentage * 100).toInt()
@@ -85,13 +126,39 @@ class HomeViewModel @Inject constructor(
     private fun updateSheetState(sheetDisplay: SheetDisplayState) =
         _uiState.update { it.copy(sheetDisplay = sheetDisplay) }
 
-    fun resetInstallationCard() =
+    /** Re-runs the real access check for the confirmed method. */
+    fun recheckAccess() = accessController.recheck()
+
+    /** Checks the GitHub releases, throttled by the manager unless forced. */
+    fun checkForUpdates(force: Boolean = false) = updateManager.check(force)
+
+    fun downloadUpdate() {
+        updateState.value.releaseOrNull()?.let { updateManager.download(it) }
+    }
+
+    fun installUpdate() = updateManager.install()
+
+    fun openUpdateReleasePage() = updateManager.openReleasePage()
+
+    fun openInstallPermissionSettings() = updateManager.openInstallPermissionSettings()
+
+    fun dismissUpdate() {
+        updateState.value.releaseOrNull()?.let { updateManager.dismiss(it.tag) }
+    }
+
+    fun clearUpdateError() = updateManager.clearError()
+
+    fun resetInstallationCard() {
+        checksumJob?.cancel()
+        checksumJob = null
+        historyRecorded = false
         _uiState.update {
             it.copy(
                 installationCard = InstallationCardState(),
                 sheetDisplay = SheetDisplayState.NONE,
             )
         }
+    }
 
     fun dismissSheet() = updateSheetState(SheetDisplayState.NONE)
 
@@ -162,6 +229,48 @@ class HomeViewModel @Inject constructor(
 
             disabledStorageCheck = readBoolPref(AppPrefs.DISABLE_STORAGE_CHECK)
             Log.d(tag, "disabledStorageCheck: $shouldKeepScreenOn")
+
+            val strictChecksum = readBoolPref(AppPrefs.STRICT_CHECKSUM)
+            val verifyChecksum = readBoolPref(AppPrefs.VERIFY_CHECKSUM, false)
+            updateInstallationCard {
+                it.copy(
+                    strictChecksum = strictChecksum,
+                    checksumVerificationEnabled = verifyChecksum,
+                )
+            }
+        }
+    }
+
+    /**
+     * Turns SHA-256 verification on or off for the current selection.
+     *
+     * Verification is off by default: while it is off the image is not hashed
+     * and nothing is compared. Turning it on computes the hash of the selected
+     * image right away so it can be shown and compared.
+     */
+    fun setChecksumVerification(enabled: Boolean) {
+        viewModelScope.launch {
+            updateBoolPref(AppPrefs.VERIFY_CHECKSUM, enabled)
+            updateInstallationCard {
+                it.copy(
+                    checksumVerificationEnabled = enabled,
+                    // The expected value and the computed hash are kept: they
+                    // stay visible but nothing is compared while this is off.
+                    checksumMismatch = false,
+                )
+            }
+            _uiState.update {
+                it.copy(
+                    expectedChecksumInput = it.installationCard.expectedChecksum,
+                    expectedChecksumInputError = false,
+                )
+            }
+            if (enabled) {
+                startChecksumComputation()
+            } else {
+                checksumJob?.cancel()
+                checksumJob = null
+            }
         }
     }
 
@@ -197,27 +306,44 @@ class HomeViewModel @Inject constructor(
     }
 
     fun onClickInstall() {
+        if (uiState.value.installationCard.isInstallBlocked()) {
+            Log.d(tag, "Installation blocked: strict checksum mode and mismatching checksum")
+            return
+        }
         session.userSelection.setUserDataSize(uiState.value.userDataCard.text)
         session.userSelection.setImageSize(uiState.value.imageSizeCard.text)
         updateSheetState(SheetDisplayState.CONFIRM_INSTALLATION)
     }
 
     fun onConfirmInstallationSheet() {
+        if (uiState.value.installationCard.isInstallBlocked()) {
+            dismissSheet()
+            return
+        }
+        historyRecorded = false
         dismissSheet()
         updateInstallationCard { it.copy(installationStep = InstallationStep.PROCESSING) }
         installationJob = Job()
         viewModelScope.launch(Dispatchers.IO + installationJob) {
             session.preferences.isUnmountSdCard = readBoolPref(AppPrefs.UMOUNT_SD)
             session.preferences.useBuiltinInstaller = readBoolPref(AppPrefs.USE_BUILTIN_INSTALLER)
-            Preparation(
-                storageManager = storageManager,
-                session = session,
-                job = installationJob,
-                onStepUpdate = this@HomeViewModel::onStepUpdate,
-                onPreparationProgressUpdate = this@HomeViewModel::onPreparationProgressUpdate,
-                onCanceled = this@HomeViewModel::onClickCancelInstallationButton,
-                onPreparationFinished = this@HomeViewModel::onPreparationFinished,
-            ).invoke()
+            try {
+                Preparation(
+                    storageManager = storageManager,
+                    session = session,
+                    job = installationJob,
+                    onStepUpdate = this@HomeViewModel::onStepUpdate,
+                    onPreparationProgressUpdate = this@HomeViewModel::onPreparationProgressUpdate,
+                    onCanceled = this@HomeViewModel::onClickCancelInstallationButton,
+                    onPreparationFinished = this@HomeViewModel::onPreparationFinished,
+                ).invoke()
+            } catch (e: CancellationException) {
+                Log.d(tag, "Preparation cancelled")
+                throw e
+            } catch (e: Exception) {
+                Log.e(tag, "Preparation failed", e)
+                onPreparationFailed(e)
+            }
         }
     }
 
@@ -229,6 +355,7 @@ class HomeViewModel @Inject constructor(
 
     private fun startInstallation() {
         Log.d(tag, "startInstallation(), session: \n$session")
+        historyRecorded = false
         updateInstallationCard { it.copy(installationStep = InstallationStep.PROCESSING) }
 
         if (session.getOperationMode() == OperationMode.ADB) {
@@ -308,12 +435,126 @@ class HomeViewModel @Inject constructor(
             "maximumAllowedForAllocation: $maximumAllowedForAllocation\n"
     }
 
+    //
+    // Install history
+    //
+
+    private fun recordHistory(result: InstallResult, errorSummary: String = "") {
+        if (historyRecorded) {
+            return
+        }
+        historyRecorded = true
+        val selection = session.userSelection
+        val entry = InstallHistoryEntry(
+            timestamp = System.currentTimeMillis(),
+            fileName = selection.selectedFileName,
+            userdataGb = selection.getUserDataSizeAsGB().toLongOrNull() ?: 0L,
+            imageSizeBytes = session.dsuInstallation.fileSize,
+            result = result,
+            errorSummary = errorSummary,
+        )
+        viewModelScope.launch {
+            try {
+                historyStore.appendHistory(entry)
+            } catch (e: Exception) {
+                Log.w(tag, "Unable to store install history", e)
+            }
+        }
+    }
+
+    /**
+     * Applies a configuration chosen in the history screen (userdata/image size).
+     * The image itself still has to be selected again, because content uris are
+     * not kept in the history.
+     */
+    fun restoreConfigurationIfRequested() {
+        if (!session.pendingConfigurationRestore) {
+            return
+        }
+        session.pendingConfigurationRestore = false
+        val selection = session.userSelection
+        Log.d(tag, "Restoring configuration from history: $selection")
+        updateUserdataCard {
+            it.copy(isSelected = true, text = "${selection.getUserDataSizeAsGB()}GB")
+        }
+        updateImageSizeCard {
+            it.copy(
+                isSelected = selection.isCustomImageSize(),
+                text = if (selection.isCustomImageSize()) {
+                    "${selection.userSelectedImageSize}b"
+                } else {
+                    ""
+                },
+            )
+        }
+    }
+
+    //
+    // Diagnostics export (explicit sharing, never automatic)
+    //
+
+    fun shareDiagnosticReport() {
+        val card = uiState.value.installationCard
+        val reporter = DiagnosticReporter(application)
+        val operationMode = OperationModeUtils.getOperationModeAsString(session.getOperationMode())
+        val installationDetails = buildInstallationDetails()
+        val errorInfo = buildErrorSummary(card)
+        val appLogs = uiState.value.installationLogs
+
+        // Reading logcat and writing the file must not run on the main thread.
+        viewModelScope.launch {
+            val report = withContext(Dispatchers.IO) {
+                reporter.buildReport(
+                    operationMode = operationMode,
+                    installationDetails = installationDetails,
+                    errorInfo = errorInfo,
+                    appLogs = appLogs,
+                )
+            }
+            reporter.share(report)
+        }
+    }
+
+    private fun buildInstallationDetails(): String {
+        val card = uiState.value.installationCard
+        val selection = session.userSelection
+        return buildString {
+            appendLine("selected file: ${selection.selectedFileName.ifEmpty { "none" }}")
+            appendLine("file uri: ${selection.selectedFileUri}")
+            appendLine("userdata size (GB): ${selection.getUserDataSizeAsGB()}")
+            appendLine("image size (bytes): ${selection.userSelectedImageSize}")
+            appendLine("checksum status: ${card.checksum.status}")
+            appendLine("sha256: ${card.checksum.value.ifEmpty { "not available" }}")
+            appendLine("expected sha256: ${card.expectedChecksum.ifEmpty { "none" }}")
+            appendLine("checksum mismatch: ${card.checksumMismatch}")
+            appendLine("device patch level: ${card.devicePatchLevel.ifEmpty { "unknown" }}")
+            appendLine("image patch level: ${card.gsiPatchLevel.ifEmpty { "unknown" }}")
+            appendLine("unmount sd card: ${session.preferences.isUnmountSdCard}")
+            appendLine("builtin installer: ${session.preferences.useBuiltinInstaller}")
+            appendLine("diagnostic: ${card.diagnosticType}")
+            append("session: $session")
+        }
+    }
+
+    private fun buildErrorSummary(card: InstallationCardState): String? {
+        if (card.errorText.isBlank() && card.rawError.isBlank()) {
+            return null
+        }
+        return buildString {
+            appendLine("step: ${card.installationStep}")
+            appendLine("diagnostic: ${card.diagnosticType}")
+            appendLine("error: ${card.errorText.ifEmpty { card.rawError }}")
+            append("raw: ${card.rawError}")
+        }
+    }
+
     fun saveLogs(uriToSaveLogs: Uri) {
         Log.d(tag, "Writing logs to: $uriToSaveLogs")
         storageManager.writeStringToUri(uiState.value.installationLogs, uriToSaveLogs)
     }
 
     fun onClickCancelInstallationButton() {
+        recordHistory(InstallResult.CANCELED)
         resetInstallationCard()
         if (session.getOperationMode() != OperationMode.ADB &&
             logger != null && logger!!.isLogging.get()
@@ -482,6 +723,157 @@ class HomeViewModel @Inject constructor(
                 isInstallable = true,
             )
         }
+
+        startVerification(filename)
+    }
+
+    //
+    // Image verification (SHA-256 and security patch level)
+    //
+
+    private fun startVerification(filename: String) {
+        checksumJob?.cancel()
+        checksumJob = null
+        updatePatchLevelInfo(filename)
+        startChecksumComputation()
+    }
+
+    private fun startChecksumComputation() {
+        checksumJob?.cancel()
+        checksumJob = viewModelScope.launch {
+            val verifyChecksum = readBoolPref(AppPrefs.VERIFY_CHECKSUM, false)
+            val strictChecksum = readBoolPref(AppPrefs.STRICT_CHECKSUM)
+            updateInstallationCard {
+                it.copy(
+                    strictChecksum = strictChecksum,
+                    checksumVerificationEnabled = verifyChecksum,
+                )
+            }
+
+            if (!verifyChecksum) {
+                // Off by default: no hashing, the image is not "unverified",
+                // the user simply did not ask for verification.
+                Log.d(tag, "SHA-256 verification is disabled")
+                updateInstallationCard {
+                    it.copy(checksum = ChecksumState(), checksumMismatch = false)
+                }
+                return@launch
+            }
+
+            val uri = session.userSelection.selectedFileUri
+            if (uri == Uri.EMPTY) {
+                return@launch
+            }
+
+            val totalBytes = try {
+                withContext(Dispatchers.IO) { storageManager.getFilesizeFromUri(uri) }
+            } catch (e: Exception) {
+                Log.w(tag, "Unable to obtain file size for checksum progress", e)
+                -1L
+            }
+
+            updateInstallationCard {
+                it.copy(checksum = ChecksumState(status = ChecksumStatus.COMPUTING))
+            }
+
+            try {
+                val hash = withContext(Dispatchers.IO) {
+                    FileChecksum.computeSha256(
+                        contentResolver = application.contentResolver,
+                        uri = uri,
+                        totalBytes = totalBytes,
+                        isCancelled = { !isActive },
+                        onProgress = { progress -> updateChecksumProgress(progress) },
+                    )
+                }
+                updateInstallationCard {
+                    it.copy(checksum = ChecksumState(ChecksumStatus.READY, 1F, hash))
+                }
+                updateChecksumMismatch()
+            } catch (e: CancellationException) {
+                Log.d(tag, "SHA-256 computation cancelled")
+                throw e
+            } catch (e: Exception) {
+                Log.w(tag, "Unable to compute SHA-256", e)
+                updateInstallationCard {
+                    it.copy(checksum = ChecksumState(status = ChecksumStatus.FAILED))
+                }
+            }
+        }
+    }
+
+    private fun updateChecksumProgress(progress: Float) =
+        updateInstallationCard {
+            it.copy(checksum = it.checksum.copy(progress = progress))
+        }
+
+    private fun updateChecksumMismatch() {
+        val card = uiState.value.installationCard
+        val actual = card.checksum.value
+        val mismatch = card.checksumVerificationEnabled &&
+            card.expectedChecksum.isNotEmpty() &&
+            actual.isNotEmpty() &&
+            !ChecksumUtils.matches(card.expectedChecksum, actual)
+        updateInstallationCard { it.copy(checksumMismatch = mismatch) }
+    }
+
+    private fun updatePatchLevelInfo(filename: String) {
+        viewModelScope.launch {
+            if (!readBoolPref(AppPrefs.CHECK_PATCH_LEVEL, true)) {
+                updateInstallationCard { it.copy(patchLevelChecked = false, patchLevelWarning = false) }
+                return@launch
+            }
+
+            val devicePatchLevel = PatchLevelUtils.parse(Build.VERSION.SECURITY_PATCH)
+            val imagePatchLevel = PatchLevelUtils.parseFromFileName(filename)
+            val comparison = PatchLevelUtils.compare(devicePatchLevel, imagePatchLevel)
+            Log.d(
+                tag,
+                "patch level: device=$devicePatchLevel image=$imagePatchLevel comparison=$comparison",
+            )
+
+            updateInstallationCard {
+                it.copy(
+                    devicePatchLevel = devicePatchLevel?.toIsoString().orEmpty(),
+                    gsiPatchLevel = imagePatchLevel?.toIsoString().orEmpty(),
+                    patchLevelChecked = true,
+                    patchLevelWarning = comparison == PatchLevelComparison.GSI_OLDER,
+                )
+            }
+        }
+    }
+
+    fun showExpectedChecksumSheet() {
+        _uiState.update {
+            it.copy(
+                sheetDisplay = SheetDisplayState.EXPECTED_CHECKSUM,
+                expectedChecksumInput = it.installationCard.expectedChecksum,
+                expectedChecksumInputError = false,
+            )
+        }
+    }
+
+    fun updateExpectedChecksumInput(input: String) {
+        _uiState.update {
+            it.copy(expectedChecksumInput = input, expectedChecksumInputError = false)
+        }
+    }
+
+    fun onConfirmExpectedChecksum() {
+        val input = uiState.value.expectedChecksumInput
+        if (input.isNotBlank() && !ChecksumUtils.isValid(input)) {
+            _uiState.update { it.copy(expectedChecksumInputError = true) }
+            return
+        }
+        updateInstallationCard { it.copy(expectedChecksum = ChecksumUtils.canonical(input)) }
+        updateChecksumMismatch()
+        dismissSheet()
+    }
+
+    fun onClearExpectedChecksum() {
+        updateInstallationCard { it.copy(expectedChecksum = "") }
+        updateChecksumMismatch()
+        dismissSheet()
     }
 
     //
@@ -521,14 +913,19 @@ class HomeViewModel @Inject constructor(
 
     private fun onRootInstallationSuccess() {
         updateInstallationCard { it.copy(installationStep = InstallationStep.INSTALL_SUCCESS_REBOOT_DYN_OS) }
+        recordHistory(InstallResult.SUCCESS)
     }
 
     private fun onInstallationSuccess() {
         updateInstallationCard { it.copy(installationStep = InstallationStep.INSTALL_SUCCESS) }
+        recordHistory(InstallResult.SUCCESS)
     }
 
     private fun onLogLineReceived() {
-        _uiState.update { it.copy(installationLogs = logger!!.logs) }
+        val logs = logger?.logs ?: return
+        _uiState.update { it.copy(installationLogs = logs) }
+        // Shared with the Log tab so both show the same lines.
+        logStore.update(logs)
     }
 
     private fun onStepUpdate(step: InstallationStep) =
@@ -537,17 +934,55 @@ class HomeViewModel @Inject constructor(
     private fun onPreparationProgressUpdate(progress: Float) =
         updateInstallationCard { it.copy(installationProgress = progress) }
 
-    private fun onInstallationError(error: InstallationStep, errorContent: String) =
+    private fun onInstallationError(error: InstallationStep, errorContent: String) {
+        val diagnosticType = DiagnosticMapper.fromStep(error, errorContent)
+        if (error == InstallationStep.ERROR_CANCELED) {
+            recordHistory(InstallResult.CANCELED, errorContent)
+        } else {
+            recordHistory(InstallResult.ERROR, errorContent)
+        }
         updateInstallationCard {
             if (error == InstallationStep.ERROR_SELINUX && !session.isRoot()) {
                 it.copy(
                     installationStep = InstallationStep.ERROR_SELINUX_ROOTLESS,
                     errorText = errorContent,
+                    diagnosticType = diagnosticType,
+                    rawError = errorContent,
                 )
             } else {
-                it.copy(installationStep = error, errorText = errorContent)
+                it.copy(
+                    installationStep = error,
+                    errorText = errorContent,
+                    diagnosticType = diagnosticType,
+                    rawError = errorContent,
+                )
             }
         }
+    }
+
+    /**
+     * Preparation failures (unreadable/corrupted images, revoked SAF permissions,
+     * missing storage...) used to escape the coroutine and crash the app. They are
+     * now mapped to a regular error card with a diagnostic.
+     */
+    private fun onPreparationFailed(throwable: Throwable) {
+        val diagnosticType = DiagnosticMapper.fromThrowable(throwable)
+        val step = if (diagnosticType == DiagnosticType.CORRUPTED_IMAGE) {
+            InstallationStep.ERROR_CORRUPTED_IMAGE
+        } else {
+            InstallationStep.ERROR
+        }
+        val rawError = throwable.message ?: throwable.toString()
+        recordHistory(InstallResult.ERROR, rawError)
+        updateInstallationCard {
+            it.copy(
+                installationStep = step,
+                errorText = rawError,
+                diagnosticType = diagnosticType,
+                rawError = throwable.toString(),
+            )
+        }
+    }
 
     private fun onInstallationProgressUpdate(progress: Float, partition: String) =
         updateInstallationCard {

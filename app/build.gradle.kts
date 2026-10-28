@@ -1,7 +1,12 @@
 import java.util.Properties
+import org.gradle.api.Project
 
-fun getReleaseSigningConfig(): File {
-    return File(".sign/dsu_sideloader.prop")
+fun getReleaseSigningConfig(rootProject: Project): File {
+    // Resolve against the root project directory so the file is found no matter
+    // which directory Gradle was invoked from (locally or on CI). Fall back to
+    // the historical working-directory relative path.
+    val rootProjectFile = File(rootProject.projectDir, ".sign/dsu_sideloader.prop")
+    return if (rootProjectFile.exists()) rootProjectFile else File(".sign/dsu_sideloader.prop")
 }
 
 plugins {
@@ -36,7 +41,7 @@ android {
     }
 
     signingConfigs {
-        val releaseSigningConfig = getReleaseSigningConfig()
+        val releaseSigningConfig = getReleaseSigningConfig(rootProject)
         if (releaseSigningConfig.exists()) {
             create("release") {
                 /**
@@ -61,9 +66,18 @@ android {
 
     buildTypes {
         getByName("release") {
-            if (getReleaseSigningConfig().exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // Prefer the release keystore from ".sign/dsu_sideloader.prop".
+            // Without it (forks, CI runs without signing secrets) fall back to
+            // the debug key so the APK stays installable: an unsigned APK is
+            // rejected by Android with INSTALL_PARSE_FAILED_NO_CERTIFICATES.
+            // Debug signed builds cannot be upgraded over a build signed with
+            // the real release key (uninstall first).
+            signingConfig =
+                if (getReleaseSigningConfig(rootProject).exists()) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -156,6 +170,9 @@ dependencies {
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:_")
 
     compileOnly(project(":hidden-api-stub"))
+
+    // Plain JVM unit tests (no Android framework, no Robolectric).
+    testImplementation("junit:junit:_")
 }
 
 tasks {

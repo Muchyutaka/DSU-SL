@@ -25,6 +25,7 @@ fun InstallationCardStep(
     onClickRebootToDynOS: () -> Unit,
     onClickViewLogs: () -> Unit,
     onClickViewCommands: () -> Unit,
+    onClickSetExpectedChecksum: () -> Unit = {},
 ) {
     when (uiState.installationStep) {
         InstallationStep.NOT_INSTALLING ->
@@ -33,6 +34,7 @@ fun InstallationCardStep(
                 uiState = uiState,
                 onClickClear = onClickClear,
                 onClickInstall = onClickInstall,
+                onClickSetExpectedChecksum = onClickSetExpectedChecksum,
             )
         InstallationStep.DSU_ALREADY_INSTALLED ->
             ProgressableCardContent(
@@ -184,6 +186,14 @@ fun InstallationCardStep(
         InstallationStep.ERROR_CREATE_PARTITION ->
             ProgressableCardContent(
                 text = stringResource(R.string.failed_create_partition),
+                textSecondButton = stringResource(id = R.string.mreturn),
+                onClickSecondButton = onClickClear,
+            )
+        InstallationStep.ERROR_CORRUPTED_IMAGE ->
+            ProgressableCardContent(
+                text = stringResource(R.string.corrupted_image_error),
+                textFirstButton = stringResource(id = R.string.view_logs),
+                onClickFirstButton = onClickViewLogs,
                 textSecondButton = stringResource(id = R.string.mreturn),
                 onClickSecondButton = onClickClear,
             )

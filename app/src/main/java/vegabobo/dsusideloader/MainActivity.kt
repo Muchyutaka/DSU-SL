@@ -8,23 +8,61 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.with
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.launch
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuProvider
+import vegabobo.dsusideloader.access.AccessController
+import vegabobo.dsusideloader.access.AccessGateState
 import vegabobo.dsusideloader.model.Session
 import vegabobo.dsusideloader.service.PrivilegedProvider
 import vegabobo.dsusideloader.service.PrivilegedRootService
 import vegabobo.dsusideloader.service.PrivilegedService
 import vegabobo.dsusideloader.service.PrivilegedSystemService
+import vegabobo.dsusideloader.ui.screen.Destinations
 import vegabobo.dsusideloader.ui.screen.Navigation
+import vegabobo.dsusideloader.ui.splash.SplashScreen
+import vegabobo.dsusideloader.ui.theme.AppearanceViewModel
 import vegabobo.dsusideloader.ui.theme.DSUHelperTheme
+import vegabobo.dsusideloader.update.UpdateManager
 import vegabobo.dsusideloader.util.OperationMode
 import vegabobo.dsusideloader.util.OperationModeUtils
+import vegabobo.dsusideloader.ui.util.motionDuration
+import vegabobo.dsusideloader.util.collectAsStateWithLifecycle
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListener {
@@ -32,15 +70,18 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
     @Inject
     lateinit var session: Session
 
+    @Inject
+    lateinit var accessController: AccessController
+
+    @Inject
+    lateinit var updateManager: UpdateManager
+
+    private val appearanceViewModel: AppearanceViewModel by viewModels()
+
     private val tag = this.javaClass.simpleName
 
-    private var shouldCheckShizuku = false
-
-    private fun setupSessionOperationMode() {
-        val operationMode = OperationModeUtils.getOperationMode(application, shouldCheckShizuku)
-        session.setOperationMode(operationMode)
-        Log.d(tag, "Operation mode is: $operationMode")
-    }
+    /** Operation mode the privileged services were bound for, null when none. */
+    private var appliedMode: OperationMode? = null
 
     //
     // Shizuku
@@ -93,8 +134,9 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
 
     fun bindShizuku() {
         Shizuku.bindUserService(userServiceArgs, PrivilegedProvider.connection)
-        shouldCheckShizuku = true
-        setupSessionOperationMode()
+        // The access method was confirmed by the onboarding screen, do not
+        // re-detect it here.
+        session.setOperationMode(OperationMode.SHIZUKU)
     }
 
     //
@@ -112,6 +154,31 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         }
     }
 
+    //
+    // Access method gate
+    //
+
+    /**
+     * Applies the confirmed access method: sets the operation mode used by the
+     * rest of the app and binds the matching privileged service.
+     *
+     * This replaces the previous silent auto-detection: the user now picks the
+     * method in the onboarding screen and it is only applied after a real check.
+     */
+    private fun applyAccessMode(mode: OperationMode) {
+        if (appliedMode == mode) {
+            return
+        }
+        val previousMode = appliedMode
+        appliedMode = mode
+        session.setOperationMode(mode)
+        Log.d(tag, "Applying operation mode: $mode")
+        if (previousMode != null) {
+            teardownService(previousMode)
+        }
+        setupService()
+    }
+
     private fun setupService() {
         if (session.isRoot()) {
             val privRootService = Intent(this, PrivilegedRootService::class.java)
@@ -125,23 +192,80 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
             return
         }
 
-        addShizukuListeners()
+        if (session.getOperationMode() == OperationMode.SHIZUKU) {
+            addShizukuListeners()
+        }
+
+        // ADB mode needs no privileged service at all.
+    }
+
+    private fun teardownService(mode: OperationMode) {
+        try {
+            when (mode) {
+                OperationMode.ROOT, OperationMode.SYSTEM_AND_ROOT ->
+                    RootService.unbind(PrivilegedProvider.connection)
+
+                OperationMode.SYSTEM ->
+                    applicationContext.unbindService(PrivilegedProvider.connection)
+
+                OperationMode.SHIZUKU -> {
+                    removeShizukuListeners()
+                    Shizuku.unbindUserService(userServiceArgs, PrivilegedProvider.connection, true)
+                }
+
+                else -> {}
+            }
+        } catch (e: Exception) {
+            // The service may never have been bound (for example when the
+            // method was changed before the bind completed).
+            Log.w(tag, "Could not unbind $mode service", e)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Shell.getShell {}
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
-            DSUHelperTheme {
-                Navigation()
+            val appearanceState by appearanceViewModel.uiState.collectAsStateWithLifecycle()
+            val gateState by accessController.gateState.collectAsStateWithLifecycle()
+
+            DSUHelperTheme(
+                themeMode = appearanceState.themeMode,
+                dynamicColor = appearanceState.dynamicColor,
+                amoledDark = appearanceState.amoledDark,
+            ) {
+                // Guarded by rememberSaveable so a configuration change does
+                // not replay the launch animation.
+                var showSplash by rememberSaveable { mutableStateOf(true) }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                ) {
+                    AccessGateContent(gateState)
+
+                    if (showSplash) {
+                        SplashScreen(onFinished = { showSplash = false })
+                    }
+                }
             }
         }
 
-        if (savedInstanceState == null) {
-            setupSessionOperationMode()
-            setupService()
+        // Automatic update check on every launch. The manager throttles it to
+        // once every few hours and only performs one anonymous request to the
+        // releases endpoint; the result is shown on the main screen banner.
+        updateManager.check()
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                accessController.gateState.collect { gate ->
+                    if (gate is AccessGateState.Confirmed) {
+                        applyAccessMode(gate.operationMode)
+                    }
+                }
+            }
         }
     }
 
@@ -155,19 +279,64 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
         if (isChangingConfigurations) {
             return
         }
-        when (session.getOperationMode()) {
-            OperationMode.ROOT, OperationMode.SYSTEM_AND_ROOT ->
-                RootService.unbind(PrivilegedProvider.connection)
+        appliedMode?.let { teardownService(it) }
+        appliedMode = null
+    }
+}
 
-            OperationMode.SYSTEM ->
-                applicationContext.unbindService(PrivilegedProvider.connection)
+/**
+ * Switches between the onboarding graph and the main graph.
+ *
+ * The two graphs are separate [Navigation] instances because the start
+ * destination differs, so the swap is animated here: the outgoing graph fades
+ * out while sliding left, the incoming one fades in from the right. That is the
+ * same pair of animations the onboarding steps use internally.
+ */
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun AccessGateContent(gateState: AccessGateState) {
+    val destination = when (gateState) {
+        is AccessGateState.Confirmed -> Destinations.Homepage
+        is AccessGateState.NeedsOnboarding -> Destinations.Onboarding
+        AccessGateState.Loading -> GATE_LOADING
+    }
+    val enterMillis = motionDuration(320)
+    val exitMillis = motionDuration(280)
 
-            OperationMode.SHIZUKU -> {
-                removeShizukuListeners()
-                Shizuku.unbindUserService(userServiceArgs, PrivilegedProvider.connection, true)
-            }
+    AnimatedContent(
+        targetState = destination,
+        transitionSpec = {
+            (slideInHorizontally(tween(enterMillis)) { it } + fadeIn(tween(enterMillis))) with
+                (slideOutHorizontally(tween(exitMillis)) { -it / 4 } + fadeOut(tween(exitMillis)))
+        },
+    ) { target ->
+        if (target == GATE_LOADING) {
+            AccessGateLoading()
+        } else {
+            Navigation(startDestination = target)
+        }
+    }
+}
 
-            else -> {}
+/** Marker target for the few frames the access gate is still resolving. */
+private const val GATE_LOADING = "gate_loading"
+
+/** Shown for the few frames the persisted access method is being validated. */
+@Composable
+private fun AccessGateLoading() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(36.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

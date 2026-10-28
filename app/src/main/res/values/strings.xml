@@ -34,6 +34,38 @@
     <string name="clear">Clear</string>
     <string name="install">Install</string>
 
+    <!-- Image verification -->
+    <string name="checksum_sha256">SHA-256</string>
+    <string name="checksum_expected">Expected</string>
+    <string name="checksum_computing">Computing image SHA-256… %1$d%%</string>
+    <string name="checksum_unavailable">Could not read the image to compute its SHA-256 checksum.</string>
+    <string name="checksum_skipped_warning">SHA-256 verification is disabled, this image was not verified. You can enable it in Settings.</string>
+    <string name="checksum_mismatch_warning">The checksum does not match the expected value. Download the image again from its official source.</string>
+    <string name="checksum_mismatch_blocked">Installation blocked: strict checksum mode is enabled and the checksum does not match.</string>
+    <string name="checksum_set_expected">Set expected checksum</string>
+    <string name="checksum_input_title">Expected SHA-256</string>
+    <string name="checksum_input_description">Paste the SHA-256 checksum you expect for this image. It is only compared locally, nothing is uploaded.</string>
+    <string name="checksum_input_label">SHA-256 checksum</string>
+    <string name="checksum_input_invalid">This is not a valid SHA-256 checksum.</string>
+    <string name="checksum_verify">Verify</string>
+    <string name="checksum_remove">Remove</string>
+    <string name="checksum_verify_toggle">Verify Checksum</string>
+    <string name="checksum_expected_hint">Set expected checksum</string>
+    <string name="checksum_expected_hint_help">Paste the published SHA-256. It is compared locally only.</string>
+    <string name="checksum_expected_set">Expected checksum set</string>
+    <string name="checksum_matches">Checksum matches the expected value</string>
+    <string name="patch_level_device_label">Device</string>
+    <string name="patch_level_image_label">Image</string>
+    <string name="patch_level_unknown">unknown</string>
+    <string name="patch_level_warning_title">Older security patch</string>
+
+    <string name="patch_level_title">Security patch level</string>
+    <string name="patch_level_device">Device: %1$s</string>
+    <string name="patch_level_image">Image (from file name): %1$s</string>
+    <string name="patch_level_image_unknown">Image: unknown (cannot be determined from the file name)</string>
+    <string name="patch_level_warning">This image may miss recent security fixes. Prefer an image with the same or a newer patch level.</string>
+    <string name="patch_level_estimate_note">The image patch level is estimated from its file name and may be inaccurate.</string>
+
     <!-- Installation dialog -->
     <string name="proceed_installation">Proceed installation?</string>
     <string name="proceed_installation_description">Installation will be made using the parameters shown below:</string>
@@ -92,6 +124,62 @@
     <!-- Extents error card -->
     <string name="extents_error_title">Extents error</string>
     <string name="extents_error_description">On Android 10 devices, images/filesystem needs to have more than 512 extents, there are some fixes you can try:\n - Install DSU Sideloader Magisk\'s module.</string>
+
+    <!-- Corrupted image error card -->
+    <string name="corrupted_image_error">The selected image looks corrupted or incomplete, please choose a valid GSI file and try again.</string>
+
+    <!-- Smart diagnostics -->
+
+    <!-- SELinux denial -->
+    <string name="diagnostic_selinux_title">SELinux denial</string>
+    <string name="diagnostic_selinux_cause">SELinux is preventing the dynamic system service (gsid) from reaching the storage or block devices it needs.</string>
+    <string name="diagnostic_selinux_fix">Install the DSU Sideloader Magisk module (it ships gsid fixes and sepolicy rules), unmount the SD card, or retry with SELinux permissive (not recommended).</string>
+
+    <!-- Partition creation -->
+    <string name="diagnostic_partition_title">Partition creation failed</string>
+    <string name="diagnostic_partition_cause">The device could not create the dynamic partitions required to hold the image.</string>
+    <string name="diagnostic_partition_fix">Free up storage, discard any existing DSU installation and try again.</string>
+
+    <!-- Corrupted image -->
+    <string name="diagnostic_corrupted_title">Corrupted or incomplete image</string>
+    <string name="diagnostic_corrupted_cause">The selected file could not be read completely, it looks truncated, corrupted or uses an unsupported archive format.</string>
+    <string name="diagnostic_corrupted_fix">Download the image again, verify its SHA-256 checksum and make sure the archive finished downloading before selecting it.</string>
+
+    <!-- Insufficient storage -->
+    <string name="diagnostic_storage_title">Insufficient storage</string>
+    <string name="diagnostic_storage_cause">The dynamic system service needs a large amount of free space (by default 40 percent of the data partition) before it can allocate the image.</string>
+    <string name="diagnostic_storage_fix">Free up storage or lower the userdata size, then try again.</string>
+
+    <!-- Unsupported image -->
+    <string name="diagnostic_unsupported_title">Unsupported image</string>
+    <string name="diagnostic_unsupported_cause">The image format or its architecture does not match what this device supports.</string>
+    <string name="diagnostic_unsupported_fix">Use a GSI built for your device architecture (arm64 or arm) and one of the accepted formats: img, gz, xz or zip (DSU package).</string>
+
+    <!-- SD card allocation -->
+    <string name="diagnostic_sdcard_title">Allocation on SD card failed</string>
+    <string name="diagnostic_sdcard_cause">The image could not be allocated on the external SD card, usually because of filesystem or permission restrictions.</string>
+    <string name="diagnostic_sdcard_fix">Unmount the SD card and retry (you can enable this permanently in Settings), or install the DSU Sideloader Magisk module.</string>
+
+    <!-- Kernel reporting f2fs in an unexpected path -->
+    <string name="diagnostic_f2fs_title">Filesystem features unavailable</string>
+    <string name="diagnostic_f2fs_cause">Your kernel reports f2fs on a path the dynamic system daemon does not expect.</string>
+    <string name="diagnostic_f2fs_fix">Install the DSU Sideloader Magisk module, which ships a gsid binary that handles this, or use another kernel.</string>
+
+    <!-- Image too fragmented -->
+    <string name="diagnostic_extents_title">Image too fragmented</string>
+    <string name="diagnostic_extents_cause">Android 10 requires the image to be stored in fewer than 512 extents, this file is too fragmented.</string>
+    <string name="diagnostic_extents_fix">Install the DSU Sideloader Magisk module, or copy the image again to a less fragmented location.</string>
+
+    <!-- Already running a dynamic system -->
+    <string name="diagnostic_running_dsu_title">Dynamic system already running</string>
+    <string name="diagnostic_running_dsu_cause">A DSU image cannot be installed while the device is already running an installed dynamic system.</string>
+    <string name="diagnostic_running_dsu_fix">Reboot to your device original system image and try again.</string>
+
+    <string name="diagnostic_suggested_fix">Suggested fix</string>
+    <string name="diagnostic_technical_details">Technical details</string>
+    <string name="diagnostic_hide_technical_details">Hide technical details</string>
+    <string name="diagnostic_view_docs">View docs</string>
+    <string name="diagnostic_no_error_details">No error details were captured.</string>
 
     <!-- Other errors card -->
     <string name="failed_create_partition">Failed to create %1$s partition.</string>
@@ -160,6 +248,52 @@
 
     <string name="developer_options">Developer options</string>
 
+    <!-- Verification settings -->
+    <string name="verification">Verification</string>
+    <string name="verify_checksum_title">Verify SHA-256</string>
+    <string name="verify_checksum_description">Compute the image checksum before installing</string>
+    <string name="strict_checksum_title">Strict checksum mode</string>
+    <string name="strict_checksum_description">Block installation when an expected checksum does not match</string>
+    <string name="check_patch_level_title">Security patch check</string>
+    <string name="check_patch_level_description">Warn when the image looks older than the device patch level</string>
+
+    <!-- Appearance settings -->
+    <string name="appearance">Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_mode_system">Follow system</string>
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="dynamic_color_title">Dynamic color</string>
+    <string name="dynamic_color_description">Use wallpaper based colors</string>
+    <string name="requires_android_12">Requires Android 12 or higher</string>
+    <string name="amoled_title">AMOLED black</string>
+    <string name="amoled_description">Use a pure black background when dark theme is active</string>
+
+    <!-- History settings and screen -->
+    <string name="history">History</string>
+    <string name="install_history_title">Install history</string>
+    <string name="install_history_description">Past installations, retry and saved presets</string>
+    <string name="history_entries_title">Recent installations</string>
+    <string name="history_empty">No installations recorded yet, history is kept only on this device.</string>
+    <string name="history_retry_note">Retry restores the configuration of that installation, select the image file again to continue.</string>
+    <string name="history_unknown_file">Unknown file</string>
+    <string name="history_result">Result: %1$s</string>
+    <string name="history_result_success">Success</string>
+    <string name="history_result_error">Failed</string>
+    <string name="history_result_canceled">Canceled</string>
+    <string name="history_userdata">Userdata: %1$s GB</string>
+    <string name="history_image_size">Image size: %1$s bytes</string>
+    <string name="history_image_size_auto">Image size: automatic</string>
+    <string name="history_error_summary">Error: %1$s</string>
+    <string name="history_retry">Retry</string>
+    <string name="history_save_preset">Save as preset</string>
+    <string name="history_clear">Clear history</string>
+    <string name="history_presets_title">Presets</string>
+    <string name="history_presets_empty">No saved presets yet, save one from a past installation.</string>
+    <string name="history_preset_title">Saved configuration</string>
+    <string name="history_preset_apply">Apply</string>
+    <string name="history_preset_delete">Delete</string>
+
     <string name="other">Other</string>
 
     <string name="operation_mode">Operation mode</string>
@@ -220,6 +354,11 @@
     <string name="installation_logs">Installation logs</string>
     <string name="save_logs">Save logs</string>
     <string name="saved_logs">Logs saved!</string>
+    <string name="share_logs">Share logs</string>
+    <string name="share_logs_title">Share diagnostic report</string>
+    <string name="export_logs_title">Export logs</string>
+    <string name="export_logs_description">Build a diagnostic report (device, app and bounded logs) and share it</string>
+    <string name="diagnostics">Diagnostics</string>
 
     <!--
         Generic and multipurpose strings
@@ -241,4 +380,152 @@
 
     <string name="close_app">Close app</string>
     <string name="close_app_question">Close app?</string>
+
+    <!-- Part 1: access method onboarding -->
+    <string name="choose_access_method">Choose how to install</string>
+    <string name="choose_access_method_description">DSU Sideloader needs one of these to install a Dynamic System Update on your device. Pick one, it is checked before you can continue.</string>
+    <string name="access_check_continue">Continue</string>
+    <string name="access_check_button">Check</string>
+    <string name="access_grant_button">Grant</string>
+    <string name="access_open_app_button">Open %1$s</string>
+    <string name="access_checking">Checking access…</string>
+    <string name="access_status_available">Available</string>
+    <string name="access_status_not_installed">Not installed</string>
+    <string name="access_status_not_running">Not running</string>
+    <string name="access_status_not_authorized">Not authorized</string>
+    <string name="access_status_unavailable">Unavailable on this device</string>
+    <string name="access_status_unknown">Not checked</string>
+    <string name="access_status_checking">Checking…</string>
+    <string name="access_method_adb">ADB</string>
+    <string name="access_method_shizuku">Shizuku</string>
+    <string name="access_method_root">Root</string>
+    <string name="access_method_adb_summary">Run one command from a computer, no root needed</string>
+    <string name="access_method_shizuku_summary">Install from the phone using the Shizuku service</string>
+    <string name="access_method_root_summary">Full control, detects and reboots into the DSU</string>
+    <string name="access_method_adb_detail">The app prepares the installation and hands you a command to run from a computer:</string>
+    <string name="access_method_shizuku_detail">Shizuku runs the ADB commands for this app with the permissions of the ADB shell. The app must be granted Shizuku access.</string>
+    <string name="access_method_root_detail">The app runs the DSU commands as root. Your root manager will ask for permission.</string>
+    <string name="access_previous_method_failed">%1$s is no longer usable on this device. Check the requirements and pick a method again.</string>
+    <string name="access_reason_root_granted">Root shell available</string>
+    <string name="access_reason_root_denied">Root was refused. Grant superuser access for DSU Sideloader in your root manager, then check again.</string>
+    <string name="access_reason_root_not_available">No su binary was found. This device is not rooted, use Shizuku or ADB instead.</string>
+    <string name="access_reason_root_check_failed">The root shell could not be opened. Check your root manager and try again.</string>
+    <string name="access_reason_shizuku_available">Shizuku is running and this app is authorized</string>
+    <string name="access_reason_shizuku_not_installed">Shizuku is not installed. Install it from its website to use this method.</string>
+    <string name="access_reason_shizuku_not_running">Shizuku is installed but its service is not running. Open Shizuku and start it, then check again.</string>
+    <string name="access_reason_shizuku_not_authorized">Shizuku is running but DSU Sideloader is not authorized. Tap Grant and accept the dialog in Shizuku.</string>
+    <string name="access_reason_shizuku_check_failed">Shizuku did not answer the permission request. Open Shizuku, make sure the service is running, then check again.</string>
+    <string name="access_reason_adb_ready">USB or wireless debugging is enabled and the DSU system app is present</string>
+    <string name="access_reason_adb_debugging_disabled">Neither USB debugging nor wireless debugging is enabled in the developer options, so no computer can reach this device.</string>
+    <string name="access_reason_adb_dsu_app_missing">The DSU system app (com.android.dynsystem) is missing on this device, so no installation can be handed over.</string>
+    <string name="access_reason_adb_check_failed">The requirements for ADB mode could not be verified.</string>
+    <string name="access_reason_not_checked">Not checked yet</string>
+    <string name="access_shizuku_install_hint">Install Shizuku</string>
+    <string name="access_system_privileges">Running as a system app</string>
+    <string name="access_change_method">Change access method</string>
+    <string name="access_recheck">Re-check access</string>
+    <string name="access_recheck_done">Access re-checked</string>
+    <string name="access_required">Access is required before installing</string>
+
+    <!-- Part 2: home screen -->
+    <string name="home_access_hero_title">Installing with %1$s</string>
+    <string name="home_stage_empty">No image selected</string>
+    <string name="home_stage_selected">Image selected</string>
+    <string name="home_stage_installing">Installing</string>
+    <string name="home_stage_result">Finished</string>
+    <string name="home_select_image">Select image</string>
+    <string name="home_change_image">Change image</string>
+    <string name="home_section_options">Installation options</string>
+
+    <!-- Part 3: what is DSU, collapsible -->
+    <string name="what_is_dsu_teaser">Android 10+ runs a full system image without touching your partitions.</string>
+    <string name="what_is_dsu_expand">Show explanation</string>
+    <string name="what_is_dsu_collapse">Hide explanation</string>
+    <string name="what_is_dsu_bullet_what">A Dynamic System Update boots a separate system image on top of your current one, using free space on the userdata partition.</string>
+    <string name="what_is_dsu_bullet_how">This app prepares the image, hands it to the DSU system app and can track the installation from start to reboot.</string>
+    <string name="what_is_dsu_bullet_risk">Your data stays untouched, but bugs in the image can bootloop it. Keep a way to remove the DSU, and never install an image from an untrusted source.</string>
+    <string name="what_is_dsu_bullet_future">DSU support is deprecated on Android 14 and later, the feature may disappear from future releases.</string>
+    <string name="what_is_dsu_read_docs">Read the documentation</string>
+
+    <!-- Part 4: settings sections -->
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_access">Access</string>
+    <string name="settings_section_installation">Installation</string>
+    <string name="settings_section_advanced">Advanced</string>
+    <string name="settings_section_logs">Logs and diagnostics</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_current_access">Current access method</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_source_code">Source code</string>
+    <string name="settings_license">License</string>
+    <string name="settings_presets">Installation presets</string>
+    <string name="clear_logs_title">Clear saved logs</string>
+    <string name="clear_logs_description">Delete the diagnostic reports kept in the app storage</string>
+    <string name="settings_presets_description">Reuse saved userdata and image size configurations</string>
+
+    <!-- App update checker -->
+    <string name="update_title">App update</string>
+    <string name="update_idle">Update check has not run yet</string>
+    <string name="update_checking">Checking GitHub releases…</string>
+    <string name="update_up_to_date">You are on the latest version (%1$s)</string>
+    <string name="update_available">Version %1$s is available, you have %2$s</string>
+    <string name="update_downloading">Downloading %1$s…</string>
+    <string name="update_ready">%1$s downloaded and verified, ready to install</string>
+    <string name="update_progress">%1$d%% · %2$d MB of %3$d MB</string>
+    <string name="update_download">Download</string>
+    <string name="update_install">Install</string>
+    <string name="update_retry">Retry</string>
+    <string name="update_later">Later</string>
+    <string name="update_release_notes">Release notes</string>
+    <string name="update_open_settings">Allow installs</string>
+    <string name="update_check_now">Check for updates</string>
+    <string name="update_error_network">Could not reach GitHub. Check your connection and try again.</string>
+    <string name="update_error_rate_limited">GitHub is limiting update checks from this network. Try again later.</string>
+    <string name="update_error_parse">The release information could not be read.</string>
+    <string name="update_error_no_apk">This release does not contain an APK.</string>
+    <string name="update_error_download">The download failed or was interrupted.</string>
+    <string name="update_error_checksum">The downloaded APK does not match the published SHA-256, it was deleted. Try again.</string>
+    <string name="update_error_install">Android does not allow this app to install packages yet. Allow it in the settings, then install again.</string>
+    <string name="update_error_conflict">This APK was signed with a different key than the installed app, Android refuses the update.</string>
+    <string name="update_conflict_title">Update Failed</string>
+    <string name="update_conflict_message">This update conflicts with your currently installed version. This usually happens when switching between official and custom builds. Please uninstall the current app and try again.</string>
+    <string name="update_available_banner_title">Update available</string>
+    <string name="update_available_banner_subtitle">%1$s is available · Tap to see the details</string>
+    <!-- Main screen -->
+    <string name="main_status_label">Access method</string>
+    <string name="main_status_verified">Verified</string>
+    <string name="main_status_how_to_fix">Access needs attention.</string>
+    <string name="main_action_select_image">Select Image</string>
+    <string name="main_action_recheck">Re-check Access</string>
+    <string name="main_action_change_method">Change Method</string>
+    <string name="main_image_card_title">Selected DSU Image</string>
+    <string name="main_image_none">No image selected</string>
+    <string name="main_image_selected">%1$s</string>
+    <string name="main_image_hint">Tap to choose an image file</string>
+    <string name="main_install">Prepare &amp; Install</string>
+    <string name="additional_settings_title">Additional Settings</string>
+
+    <!-- Logs tab -->
+    <string name="log_title">Log</string>
+    <string name="log_subtitle">Live output of the last installation and diagnostics report</string>
+    <string name="log_empty">No log lines yet. They appear here while the app prepares and installs an image.</string>
+    <string name="log_share">Share report</string>
+    <string name="log_clear">Clear</string>
+    <!-- Onboarding steps -->
+    <string name="onboarding_setup_title">Finish the setup</string>
+    <string name="onboarding_setup_subtitle">These steps make %1$s work on this device.</string>
+    <string name="onboarding_setup_adb_step_1">Enable Developer options, then turn on USB debugging or Wireless debugging.</string>
+    <string name="onboarding_setup_adb_step_2">Connect this device to a computer with adb installed, and authorize the computer.</string>
+    <string name="onboarding_setup_adb_step_3">After installing from the app, run the generated command in that adb shell.</string>
+    <string name="onboarding_setup_shizuku_step_1">Install Shizuku from shizuku.rikka.app if it is not installed yet.</string>
+    <string name="onboarding_setup_shizuku_step_2">Start Shizuku (wireless debugging on Android 11+ or adb from a computer), then keep it running.</string>
+    <string name="onboarding_setup_shizuku_step_3">Tap Grant below and accept the request in Shizuku.</string>
+    <string name="onboarding_setup_root_step_1">Make sure this device is rooted and the su binary is available.</string>
+    <string name="onboarding_setup_root_step_2">Tap Check below and allow superuser access for DSU Sideloader in your root manager.</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_ready_title">You are all set</string>
+    <string name="onboarding_ready_subtitle">%1$s was verified. You can change the method at any time from the main screen.</string>
+    <string name="onboarding_ready_open">Open DSU Sideloader</string>
+    <string name="nav_main">Main</string>
+
 </resources>

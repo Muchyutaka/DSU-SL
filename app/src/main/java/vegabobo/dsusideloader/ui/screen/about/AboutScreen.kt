@@ -13,9 +13,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.collectLatest
+import vegabobo.dsusideloader.BuildConfig
 import vegabobo.dsusideloader.R
-import vegabobo.dsusideloader.ui.cards.updater.UpdaterCard
 import vegabobo.dsusideloader.ui.components.ApplicationScreen
+import vegabobo.dsusideloader.ui.components.UpdateCard
 import vegabobo.dsusideloader.ui.components.PreferenceItem
 import vegabobo.dsusideloader.ui.components.SimpleCard
 import vegabobo.dsusideloader.ui.components.Title
@@ -37,6 +38,7 @@ fun AboutScreen(
     aboutViewModel: AboutViewModel = hiltViewModel(),
 ) {
     val uiState by aboutViewModel.uiState.collectAsStateWithLifecycle()
+    val updateState by aboutViewModel.updateState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
 
@@ -73,14 +75,31 @@ fun AboutScreen(
             )
         },
     ) {
-        UpdaterCard(
-            uiState = uiState.updaterCardState,
-            isUpdaterAvailable = uiState.isUpdaterAvailable,
-            onClickImage = { aboutViewModel.onClickImage() },
-            onClickCheckUpdates = { aboutViewModel.onClickCheckUpdates() },
-            onClickDownloadUpdate = { aboutViewModel.onClickDownloadUpdate() },
-            onClickViewChangelog = { uriHandler.openUri(aboutViewModel.response.changelogUrl) },
+        UpdateCard(
+            state = updateState,
+            currentVersion = aboutViewModel.currentVersion,
+            onCheck = { aboutViewModel.onClickCheckUpdates() },
+            onDownload = { aboutViewModel.onClickDownloadUpdate() },
+            onInstall = { aboutViewModel.onClickInstallUpdate() },
+            onOpenReleasePage = { aboutViewModel.onClickOpenReleasePage() },
+            onOpenInstallSettings = { aboutViewModel.onClickOpenInstallSettings() },
+            onAcknowledgeConflict = { aboutViewModel.clearUpdateError() },
         )
+        SimpleCard(
+            addPadding = false,
+            cardTitle = stringResource(id = R.string.app_name),
+            text = stringResource(
+                id = R.string.version_info,
+                BuildConfig.VERSION_NAME,
+                BuildConfig.VERSION_CODE,
+            ),
+        ) {
+            PreferenceItem(
+                title = stringResource(id = R.string.update_check_now),
+                description = stringResource(id = R.string.update_idle),
+                onClick = { aboutViewModel.onClickCheckUpdates() },
+            )
+        }
         Title(
             stringResource(id = R.string.application),
             modifier = Modifier.padding(top = 2.dp, bottom = 2.dp),

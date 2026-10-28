@@ -71,6 +71,12 @@ class Session(
     // Only populated on UNROOTED mode
     var installationScriptPath = ""
 
+    /**
+     * Set when a history entry or a preset was applied, so the home screen can
+     * pick the configuration up once. Never persisted.
+     */
+    var pendingConfigurationRestore: Boolean = false
+
     fun getInstallationParameters(): Triple<Long, String, Long> {
         val userdataSize = userSelection.userSelectedUserdata
         val absoluteFilePath = FilenameUtils.getFilePath(dsuInstallation.uri, true)

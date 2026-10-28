@@ -1,16 +1,11 @@
 package vegabobo.dsusideloader.ui.screen.home
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,7 +53,6 @@ import vegabobo.dsusideloader.ui.util.rememberMotionEnabled
  * works (live dot + label), the current installation stage and the primary
  * action.
  */
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AccessHeroCard(
     method: AccessMethod?,
@@ -127,14 +121,9 @@ fun AccessHeroCard(
             Spacer(modifier = Modifier.padding(top = 10.dp))
 
             // Stage line: empty -> selected -> installing -> result.
-            AnimatedContent(
+            Crossfade(
                 targetState = stage,
-                transitionSpec = {
-                    (fadeIn(tween(motionDuration(200))) +
-                        slideInVertically(tween(motionDuration(220))) { it / 4 }) with
-                        (fadeOut(tween(motionDuration(120))) +
-                            slideOutVertically(tween(motionDuration(160))) { -it / 4 })
-                },
+                animationSpec = tween(motionDuration(200)),
             ) { animatedStage ->
                 Text(
                     text = when (animatedStage) {

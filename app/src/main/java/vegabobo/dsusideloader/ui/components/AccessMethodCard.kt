@@ -1,8 +1,7 @@
 package vegabobo.dsusideloader.ui.components
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -61,7 +60,6 @@ import vegabobo.dsusideloader.ui.util.motionDuration
  * Selection is animated with a scale + border + container color change, the
  * status block cross fades between states and the success checkmark scales in.
  */
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AccessMethodCard(
     method: AccessMethod,
@@ -141,11 +139,9 @@ fun AccessMethodCard(
 
             Spacer(modifier = Modifier.padding(top = 10.dp))
 
-            AnimatedContent(
+            Crossfade(
                 targetState = result,
-                transitionSpec = {
-                    fadeIn(tween(motionDuration(180))) with fadeOut(tween(motionDuration(120)))
-                },
+                animationSpec = tween(motionDuration(180)),
             ) { animatedResult ->
                 Column {
                     if (animatedResult.status == AccessStatus.CHECKING) {
